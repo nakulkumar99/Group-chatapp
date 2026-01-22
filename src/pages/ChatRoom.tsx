@@ -14,7 +14,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { useMessages } from "@/hooks/useMessages";
 import { useGroupMembers } from "@/hooks/useGroupMembers";
-import { useTypingIndicator } from "@/hooks/useTypingIndicator";
+import { usePresence } from "@/hooks/usePresence";
 import { supabase } from "@/integrations/supabase/client";
 import { messageSchema } from "@/lib/validations";
 import { Button } from "@/components/ui/button";
@@ -53,7 +53,7 @@ export default function ChatRoom() {
   const { user } = useAuth();
   const { messages, loading: messagesLoading, sendMessage } = useMessages(groupId || null);
   const { members, loading: membersLoading } = useGroupMembers(groupId || null);
-  const { typingUsers, startTyping, stopTyping } = useTypingIndicator(groupId || null);
+  const { typingUsers, onlineCount, startTyping, stopTyping, isUserOnline, isUserTyping } = usePresence(groupId || null);
   const [group, setGroup] = useState<GroupInfo | null>(null);
   const [newMessage, setNewMessage] = useState("");
   const [sending, setSending] = useState(false);
@@ -203,7 +203,7 @@ export default function ChatRoom() {
                 </p>
               ) : (
                 <p className="text-xs text-white/70">
-                  {members.length} member{members.length !== 1 ? "s" : ""}
+                  {onlineCount > 0 ? `${onlineCount} online • ` : ""}{members.length} member{members.length !== 1 ? "s" : ""}
                 </p>
               )}
             </div>
@@ -368,39 +368,63 @@ export default function ChatRoom() {
               className="border-l border-border bg-sidebar overflow-hidden"
             >
               <div className="p-4">
-                <h2 className="font-semibold text-foreground mb-4 flex items-center gap-2">
+                <h2 className="font-semibold text-foreground mb-2 flex items-center gap-2">
                   <Users className="w-5 h-5 text-[hsl(149,67%,38%)]" />
                   Members ({members.length})
                 </h2>
+                <p className="text-xs text-muted-foreground mb-4">
+                  <span className="inline-flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-[hsl(142,76%,45%)]"></span>
+                    {onlineCount} online
+                  </span>
+                </p>
                 {membersLoading ? (
                   <div className="animate-pulse text-muted-foreground text-sm">
                     Loading...
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {members.map((member) => (
-                      <div
-                        key={member.id}
-                        className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent transition-colors"
-                      >
-                        <Avatar className="w-10 h-10">
-                          <AvatarFallback className="bg-[hsl(149,67%,38%)] text-white">
-                            {getInitials(member.profile?.username || "U")}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm text-foreground truncate">
-                            {member.profile?.username || "Unknown"}
-                          </p>
-                          {member.user_id === group?.created_by && (
-                            <span className="text-xs text-[hsl(149,67%,45%)]">Admin</span>
-                          )}
-                          {member.user_id === user?.id && member.user_id !== group?.created_by && (
-                            <span className="text-xs text-muted-foreground">You</span>
-                          )}
+                    {members.map((member) => {
+                      const isOnline = isUserOnline(member.user_id);
+                      const isTyping = isUserTyping(member.user_id);
+                      
+                      return (
+                        <div
+                          key={member.id}
+                          className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent transition-colors"
+                        >
+                          <div className="relative">
+                            <Avatar className="w-10 h-10">
+                              <AvatarFallback className="bg-[hsl(149,67%,38%)] text-white">
+                                {getInitials(member.profile?.username || "U")}
+                              </AvatarFallback>
+                            </Avatar>
+                            {/* Online indicator */}
+                            <span 
+                              className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-sidebar ${
+                                isOnline ? "bg-[hsl(142,76%,45%)]" : "bg-muted-foreground/50"
+                              }`}
+                            />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm text-foreground truncate">
+                              {member.profile?.username || "Unknown"}
+                            </p>
+                            {isTyping ? (
+                              <span className="text-xs text-[hsl(149,67%,45%)] animate-pulse">typing...</span>
+                            ) : member.user_id === group?.created_by ? (
+                              <span className="text-xs text-[hsl(149,67%,45%)]">Admin</span>
+                            ) : member.user_id === user?.id ? (
+                              <span className="text-xs text-muted-foreground">You</span>
+                            ) : isOnline ? (
+                              <span className="text-xs text-[hsl(142,76%,45%)]">Online</span>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">Offline</span>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
