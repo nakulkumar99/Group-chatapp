@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageCircle, Plus, LogOut, Search } from "lucide-react";
+import { MessageCircle, Plus, LogOut, Search, Users } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useGroups } from "@/hooks/useGroups";
 import { GroupCard } from "@/components/GroupCard";
@@ -9,6 +9,7 @@ import { CreateGroupModal } from "@/components/CreateGroupModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 export default function Index() {
   const navigate = useNavigate();
@@ -36,6 +37,10 @@ export default function Index() {
     g.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const getInitials = (email: string) => {
+    return email.split("@")[0].slice(0, 2).toUpperCase();
+  };
+
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -48,18 +53,25 @@ export default function Index() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-20 bg-background/80 backdrop-blur-xl border-b border-border">
+      {/* WhatsApp-style Header */}
+      <header className="sticky top-0 z-20 bg-[hsl(174,57%,26%)] shadow-lg">
         <div className="max-w-2xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
-              <MessageCircle className="w-5 h-5 text-primary-foreground" />
+            <div className="w-10 h-10 rounded-full bg-[hsl(149,67%,38%)] flex items-center justify-center">
+              <MessageCircle className="w-5 h-5 text-white" />
             </div>
-            <h1 className="text-xl font-bold text-foreground">ChatSpace</h1>
+            <h1 className="text-xl font-bold text-white">ChatSpace</h1>
           </div>
-          <Button variant="ghost" size="icon" onClick={handleSignOut} className="hover:bg-accent">
-            <LogOut className="w-5 h-5" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Avatar className="w-8 h-8">
+              <AvatarFallback className="bg-[hsl(149,67%,38%)] text-white text-xs">
+                {getInitials(user.email || "U")}
+              </AvatarFallback>
+            </Avatar>
+            <Button variant="ghost" size="icon" onClick={handleSignOut} className="hover:bg-white/10 text-white">
+              <LogOut className="w-5 h-5" />
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -72,10 +84,10 @@ export default function Index() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search groups..."
-              className="pl-10 h-12 bg-secondary border-border focus:border-primary"
+              className="pl-10 h-11 rounded-full bg-[hsl(203,23%,18%)] border-0 focus:ring-1 focus:ring-[hsl(149,67%,38%)]"
             />
           </div>
-          <Button onClick={() => setShowCreateModal(true)} className="h-12 btn-twitter px-4">
+          <Button onClick={() => setShowCreateModal(true)} className="h-11 px-5 rounded-full bg-[hsl(149,67%,38%)] hover:bg-[hsl(149,67%,33%)]">
             <Plus className="w-5 h-5 mr-2" />
             New Group
           </Button>
@@ -94,7 +106,7 @@ export default function Index() {
             ) : filteredMyGroups.length === 0 ? (
               <div className="text-center py-12">
                 <p className="text-muted-foreground mb-4">You haven't joined any groups yet</p>
-                <Button onClick={() => setShowCreateModal(true)} className="btn-twitter">
+                <Button onClick={() => setShowCreateModal(true)} className="rounded-full bg-[hsl(149,67%,38%)] hover:bg-[hsl(149,67%,33%)]">
                   Create your first group
                 </Button>
               </div>

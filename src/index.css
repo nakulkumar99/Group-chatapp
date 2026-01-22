@@ -37,11 +37,15 @@
     --radius: 1rem;
 
     /* Custom tokens */
-    --chat-bubble-own: 204 88% 53%;
+    --chat-bubble-own: 149 67% 33%;
     --chat-bubble-other: 203 23% 18%;
     --online-indicator: 142 76% 45%;
     --hover-overlay: 203 23% 12%;
     --divider: 203 23% 16%;
+    --whatsapp-green: 149 67% 38%;
+    --whatsapp-dark: 200 18% 13%;
+    --whatsapp-teal: 174 57% 40%;
+    --typing-indicator: 149 67% 45%;
 
     --sidebar-background: 203 23% 7%;
     --sidebar-foreground: 0 0% 100%;
@@ -123,11 +127,19 @@
   }
 
   .message-bubble-own {
-    @apply bg-primary text-primary-foreground rounded-2xl rounded-br-sm;
+    @apply bg-[hsl(var(--whatsapp-green))] text-primary-foreground rounded-lg rounded-tr-none shadow-md;
   }
 
   .message-bubble-other {
-    @apply bg-accent text-foreground rounded-2xl rounded-bl-sm;
+    @apply bg-accent text-foreground rounded-lg rounded-tl-none shadow-md;
+  }
+
+  .typing-indicator {
+    @apply text-[hsl(var(--typing-indicator))] text-sm font-medium animate-pulse;
+  }
+
+  .whatsapp-header {
+    @apply bg-[hsl(var(--whatsapp-teal))] text-primary-foreground;
   }
 
   .input-dark {

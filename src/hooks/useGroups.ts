@@ -139,6 +139,25 @@ export function useGroups() {
     return { error: null };
   };
 
+  const deleteGroup = async (groupId: string) => {
+    if (!user) return { error: new Error("Not authenticated") };
+
+    const { error } = await supabase
+      .from("groups")
+      .delete()
+      .eq("id", groupId)
+      .eq("created_by", user.id);
+
+    if (error) {
+      toast.error("Failed to delete group");
+      return { error };
+    }
+
+    toast.success("Group deleted");
+    await fetchGroups();
+    return { error: null };
+  };
+
   return {
     groups,
     myGroups,
@@ -146,6 +165,7 @@ export function useGroups() {
     createGroup,
     joinGroup,
     leaveGroup,
+    deleteGroup,
     refetch: fetchGroups,
   };
 }
