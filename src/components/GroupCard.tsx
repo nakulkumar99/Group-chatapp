@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
-import { Users, MessageCircle, UserPlus, UserMinus } from "lucide-react";
+import { Users, MessageCircle, UserPlus, UserMinus, Check, CheckCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 interface GroupCardProps {
   id: string;
@@ -23,59 +24,78 @@ export function GroupCard({
   onLeave,
   onOpen,
 }: GroupCardProps) {
+  const getInitials = (text: string) => {
+    return text
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      whileHover={{ scale: 1.02 }}
-      transition={{ duration: 0.2 }}
-      className="glass-card rounded-xl p-4 hover:border-primary/50 transition-colors cursor-pointer"
+      whileHover={{ scale: 1.01 }}
+      transition={{ duration: 0.15 }}
+      className="bg-secondary/50 hover:bg-secondary/80 rounded-xl p-3 transition-all cursor-pointer border border-border/30"
       onClick={() => isMember && onOpen(id)}
     >
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-              <MessageCircle className="w-5 h-5 text-primary" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-foreground truncate">{name}</h3>
-              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                <Users className="w-3 h-3" />
-                <span>
-                  {memberCount} member{memberCount !== 1 ? "s" : ""}
-                </span>
-              </div>
-            </div>
-          </div>
-          {description && (
-            <p className="text-sm text-muted-foreground line-clamp-2">
-              {description}
-            </p>
-          )}
-        </div>
+      <div className="flex items-center gap-3">
+        {/* Group Avatar */}
+        <Avatar className="w-12 h-12 shrink-0">
+          <AvatarFallback className="bg-[hsl(149,67%,38%)] text-white font-bold text-sm">
+            {getInitials(name)}
+          </AvatarFallback>
+        </Avatar>
 
-        <div onClick={(e) => e.stopPropagation()}>
-          {isMember ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onLeave(id)}
-              className="text-destructive hover:text-destructive hover:bg-destructive/10"
-            >
-              <UserMinus className="w-4 h-4 mr-1" />
-              Leave
-            </Button>
-          ) : (
-            <Button
-              size="sm"
-              onClick={() => onJoin(id)}
-              className="btn-twitter"
-            >
-              <UserPlus className="w-4 h-4 mr-1" />
-              Join
-            </Button>
-          )}
+        {/* Group Info */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="font-semibold text-foreground truncate">{name}</h3>
+            <span className="text-xs text-muted-foreground shrink-0">
+              {memberCount} {memberCount === 1 ? "member" : "members"}
+            </span>
+          </div>
+          <p className="text-sm text-muted-foreground truncate mt-0.5">
+            {description || "No description"}
+          </p>
+          
+          {/* Action Row */}
+          <div className="flex items-center justify-between mt-2" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Users className="w-3.5 h-3.5" />
+              <span>Group chat</span>
+            </div>
+            
+            {isMember ? (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-[hsl(149,67%,45%)] flex items-center gap-1">
+                  <Check className="w-3.5 h-3.5" />
+                  Joined
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onLeave(id)}
+                  className="h-7 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                >
+                  <UserMinus className="w-3.5 h-3.5 mr-1" />
+                  Leave
+                </Button>
+              </div>
+            ) : (
+              <Button
+                size="sm"
+                onClick={() => onJoin(id)}
+                className="h-7 text-xs bg-[hsl(149,67%,38%)] hover:bg-[hsl(149,67%,33%)] rounded-full"
+              >
+                <UserPlus className="w-3.5 h-3.5 mr-1" />
+                Join
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </motion.div>
