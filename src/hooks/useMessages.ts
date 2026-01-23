@@ -10,6 +10,9 @@ interface Message {
   user_id: string;
   content: string;
   created_at: string;
+  file_url?: string | null;
+  file_type?: string | null;
+  file_name?: string | null;
   profile?: {
     username: string;
     avatar_url: string | null;
@@ -110,13 +113,21 @@ export function useMessages(groupId: string | null) {
     };
   }, [groupId, user, fetchMessages]);
 
-  const sendMessage = async (content: string) => {
+  const sendMessage = async (
+    content: string,
+    fileUrl?: string,
+    fileType?: string,
+    fileName?: string
+  ) => {
     if (!groupId || !user) return { error: new Error("Not authenticated") };
 
     const { error } = await supabase.from("messages").insert({
       group_id: groupId,
       user_id: user.id,
-      content,
+      content: content || "",
+      file_url: fileUrl || null,
+      file_type: fileType || null,
+      file_name: fileName || null,
     });
 
     if (error) {
