@@ -4,21 +4,16 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
   Users,
-  Send,
   MoreVertical,
   Trash2,
   LogOut,
-  Check,
-  CheckCheck,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMessages } from "@/hooks/useMessages";
 import { useGroupMembers } from "@/hooks/useGroupMembers";
 import { usePresence } from "@/hooks/usePresence";
 import { supabase } from "@/integrations/supabase/client";
-import { messageSchema } from "@/lib/validations";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -38,6 +33,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { MessageBubble } from "@/components/MessageBubble";
+import { ChatInput } from "@/components/ChatInput";
 import { toast } from "sonner";
 
 interface GroupInfo {
@@ -53,10 +50,8 @@ export default function ChatRoom() {
   const { user } = useAuth();
   const { messages, loading: messagesLoading, sendMessage } = useMessages(groupId || null);
   const { members, loading: membersLoading } = useGroupMembers(groupId || null);
-  const { typingUsers, onlineCount, startTyping, stopTyping, isUserOnline, isUserTyping } = usePresence(groupId || null);
+  const { typingUsers, onlineCount, startTyping, isUserOnline, isUserTyping } = usePresence(groupId || null);
   const [group, setGroup] = useState<GroupInfo | null>(null);
-  const [newMessage, setNewMessage] = useState("");
-  const [sending, setSending] = useState(false);
   const [showMembers, setShowMembers] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -89,29 +84,13 @@ export default function ChatRoom() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const handleSend = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    const result = messageSchema.safeParse({ content: newMessage });
-    if (!result.success) {
-      toast.error(result.error.errors[0]?.message || "Invalid message");
-      return;
-    }
-
-    setSending(true);
-    stopTyping();
-    const { error } = await sendMessage(newMessage.trim());
-    if (!error) {
-      setNewMessage("");
-    }
-    setSending(false);
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setNewMessage(e.target.value);
-    if (e.target.value.trim()) {
-      startTyping();
-    }
+  const handleSendMessage = async (
+    content: string,
+    fileUrl?: string,
+    fileType?: string,
+    fileName?: string
+  ) => {
+    return sendMessage(content, fileUrl, fileType, fileName);
   };
 
   const handleLeave = async () => {
@@ -152,13 +131,6 @@ export default function ChatRoom() {
       .join("")
       .toUpperCase()
       .slice(0, 2);
-  };
-
-  const formatTime = (date: string) => {
-    return new Date(date).toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
   };
 
   const getTypingText = () => {
@@ -281,53 +253,23 @@ export default function ChatRoom() {
               <div className="space-y-2">
                 <AnimatePresence mode="popLayout">
                   {messages.map((message, index) => {
-                    const isOwn = message.user_id === user?.id;
+                    const isOwnMessage = message.user_id === user?.id;
                     const showAvatar =
                       index === 0 ||
                       messages[index - 1]?.user_id !== message.user_id;
                     const showName =
-                      !isOwn &&
+                      !isOwnMessage &&
                       (index === 0 ||
                         messages[index - 1]?.user_id !== message.user_id);
 
                     return (
-                      <motion.div
+                      <MessageBubble
                         key={message.id}
-                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.95 }}
-                        transition={{ duration: 0.2 }}
-                        className={`flex gap-2 ${isOwn ? "justify-end" : "justify-start"}`}
-                      >
-                        {!isOwn && showAvatar && (
-                          <Avatar className="w-8 h-8 shrink-0 mt-auto">
-                            <AvatarFallback className="bg-[hsl(149,67%,38%)] text-white text-xs">
-                              {getInitials(message.profile?.username || "U")}
-                            </AvatarFallback>
-                          </Avatar>
-                        )}
-                        {!isOwn && !showAvatar && <div className="w-8 shrink-0" />}
-                        <div className={`max-w-[75%] ${isOwn ? "items-end" : "items-start"}`}>
-                          {showName && (
-                            <p className="text-xs text-[hsl(149,67%,45%)] mb-1 ml-2 font-medium">
-                              {message.profile?.username || "Unknown"}
-                            </p>
-                          )}
-                          <div
-                            className={`px-3 py-2 relative ${
-                              isOwn
-                                ? "message-bubble-own"
-                                : "message-bubble-other"
-                            }`}
-                          >
-                            <p className="text-sm break-words pr-12">{message.content}</p>
-                            <span className="absolute bottom-1 right-2 text-[10px] text-white/60 flex items-center gap-1">
-                              {formatTime(message.created_at)}
-                              {isOwn && <CheckCheck className="w-3.5 h-3.5 text-blue-300" />}
-                            </span>
-                          </div>
-                        </div>
-                      </motion.div>
+                        message={message}
+                        isOwn={isOwnMessage}
+                        showAvatar={showAvatar}
+                        showName={showName}
+                      />
                     );
                   })}
                 </AnimatePresence>
@@ -337,24 +279,10 @@ export default function ChatRoom() {
           </ScrollArea>
 
           {/* WhatsApp-style Message Input */}
-          <div className="p-3 bg-[hsl(200,18%,13%)]">
-            <form onSubmit={handleSend} className="flex gap-2 items-center">
-              <Input
-                value={newMessage}
-                onChange={handleInputChange}
-                placeholder="Type a message"
-                className="flex-1 h-11 rounded-full bg-[hsl(203,23%,18%)] border-0 focus:ring-1 focus:ring-[hsl(149,67%,38%)] px-4"
-                maxLength={1000}
-              />
-              <Button
-                type="submit"
-                disabled={sending || !newMessage.trim()}
-                className="h-11 w-11 rounded-full bg-[hsl(149,67%,38%)] hover:bg-[hsl(149,67%,33%)] p-0 shadow-lg"
-              >
-                <Send className="w-5 h-5 text-white" />
-              </Button>
-            </form>
-          </div>
+          <ChatInput
+            onSend={handleSendMessage}
+            onTyping={startTyping}
+          />
         </div>
 
         {/* Members Sidebar */}
@@ -385,8 +313,8 @@ export default function ChatRoom() {
                 ) : (
                   <div className="space-y-2">
                     {members.map((member) => {
-                      const isOnline = isUserOnline(member.user_id);
-                      const isTyping = isUserTyping(member.user_id);
+                      const memberIsOnline = isUserOnline(member.user_id);
+                      const memberIsTyping = isUserTyping(member.user_id);
                       
                       return (
                         <div
@@ -402,7 +330,7 @@ export default function ChatRoom() {
                             {/* Online indicator */}
                             <span 
                               className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-sidebar ${
-                                isOnline ? "bg-[hsl(142,76%,45%)]" : "bg-muted-foreground/50"
+                                memberIsOnline ? "bg-[hsl(142,76%,45%)]" : "bg-muted-foreground/50"
                               }`}
                             />
                           </div>
@@ -410,13 +338,13 @@ export default function ChatRoom() {
                             <p className="font-medium text-sm text-foreground truncate">
                               {member.profile?.username || "Unknown"}
                             </p>
-                            {isTyping ? (
+                            {memberIsTyping ? (
                               <span className="text-xs text-[hsl(149,67%,45%)] animate-pulse">typing...</span>
                             ) : member.user_id === group?.created_by ? (
                               <span className="text-xs text-[hsl(149,67%,45%)]">Admin</span>
                             ) : member.user_id === user?.id ? (
                               <span className="text-xs text-muted-foreground">You</span>
-                            ) : isOnline ? (
+                            ) : memberIsOnline ? (
                               <span className="text-xs text-[hsl(142,76%,45%)]">Online</span>
                             ) : (
                               <span className="text-xs text-muted-foreground">Offline</span>
