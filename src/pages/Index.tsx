@@ -1,19 +1,21 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageCircle, Plus, LogOut, Search, Users } from "lucide-react";
+import { MessageCircle, Plus, Search, User } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useGroups } from "@/hooks/useGroups";
+import { useProfile } from "@/hooks/useProfile";
 import { GroupCard } from "@/components/GroupCard";
 import { CreateGroupModal } from "@/components/CreateGroupModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function Index() {
   const navigate = useNavigate();
-  const { user, loading: authLoading, signOut } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const { profile } = useProfile();
   const { groups, myGroups, loading: groupsLoading, createGroup, joinGroup, leaveGroup } = useGroups();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -24,11 +26,6 @@ export default function Index() {
     }
   }, [user, authLoading, navigate]);
 
-  const handleSignOut = async () => {
-    await signOut();
-    navigate("/auth");
-  };
-
   const filteredGroups = groups.filter((g) =>
     g.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -37,8 +34,8 @@ export default function Index() {
     g.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const getInitials = (email: string) => {
-    return email.split("@")[0].slice(0, 2).toUpperCase();
+  const getInitials = (name: string) => {
+    return name.slice(0, 2).toUpperCase();
   };
 
   if (authLoading) {
@@ -63,13 +60,20 @@ export default function Index() {
             <h1 className="text-xl font-bold text-white">ChatSpace</h1>
           </div>
           <div className="flex items-center gap-2">
-            <Avatar className="w-8 h-8">
-              <AvatarFallback className="bg-[hsl(149,67%,38%)] text-white text-xs">
-                {getInitials(user.email || "U")}
-              </AvatarFallback>
-            </Avatar>
-            <Button variant="ghost" size="icon" onClick={handleSignOut} className="hover:bg-white/10 text-white">
-              <LogOut className="w-5 h-5" />
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => navigate("/profile")} 
+              className="hover:bg-white/10 p-0 w-10 h-10"
+            >
+              <Avatar className="w-9 h-9 border-2 border-white/20">
+                {profile?.avatar_url ? (
+                  <AvatarImage src={profile.avatar_url} alt={profile.username} />
+                ) : null}
+                <AvatarFallback className="bg-[hsl(149,67%,38%)] text-white text-xs">
+                  {getInitials(profile?.username || user.email || "U")}
+                </AvatarFallback>
+              </Avatar>
             </Button>
           </div>
         </div>

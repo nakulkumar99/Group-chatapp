@@ -98,7 +98,7 @@ export function ChatInput({ onSend, onTyping, disabled }: ChatInputProps) {
   const isSubmitDisabled = sending || uploading || disabled || (!message.trim() && !selectedFile);
 
   return (
-    <div className="p-3 bg-[hsl(200,18%,13%)]">
+    <div className="p-3 bg-transparent">
       {/* File Preview */}
       {selectedFile && (
         <div className="mb-3 px-2">

@@ -1,12 +1,22 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { CheckCheck, Download, FileText, Play, Image as ImageIcon, X } from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
 } from "@/components/ui/dialog";
+import { ReadReceiptAvatars } from "./ReadReceiptAvatars";
+
+interface ReadReceipt {
+  id: string;
+  user_id: string;
+  profile?: {
+    username: string;
+    avatar_url: string | null;
+  };
+}
 
 interface MessageBubbleProps {
   message: {
@@ -25,9 +35,11 @@ interface MessageBubbleProps {
   isOwn: boolean;
   showAvatar: boolean;
   showName: boolean;
+  readReceipts?: ReadReceipt[];
+  currentUserId?: string;
 }
 
-export function MessageBubble({ message, isOwn, showAvatar, showName }: MessageBubbleProps) {
+export function MessageBubble({ message, isOwn, showAvatar, showName, readReceipts = [], currentUserId }: MessageBubbleProps) {
   const [imagePreview, setImagePreview] = useState(false);
 
   const getInitials = (name: string) => {
@@ -181,6 +193,9 @@ export function MessageBubble({ message, isOwn, showAvatar, showName }: MessageB
     >
       {!isOwn && showAvatar && (
         <Avatar className="w-8 h-8 shrink-0 mt-auto">
+          {message.profile?.avatar_url ? (
+            <AvatarImage src={message.profile.avatar_url} alt={message.profile.username} />
+          ) : null}
           <AvatarFallback className="bg-[hsl(149,67%,38%)] text-white text-xs">
             {getInitials(message.profile?.username || "U")}
           </AvatarFallback>
@@ -206,9 +221,18 @@ export function MessageBubble({ message, isOwn, showAvatar, showName }: MessageB
           )}
           <span className={`absolute bottom-1 right-2 text-[10px] flex items-center gap-1 ${isOwn ? "text-white/60" : "text-muted-foreground"}`}>
             {formatTime(message.created_at)}
-            {isOwn && <CheckCheck className="w-3.5 h-3.5 text-blue-300" />}
+            {isOwn && <CheckCheck className={`w-3.5 h-3.5 ${readReceipts.length > 0 ? "text-blue-300" : "text-white/40"}`} />}
           </span>
         </div>
+        {/* Read receipts - only show for own messages */}
+        {isOwn && readReceipts.length > 0 && (
+          <div className="flex justify-end">
+            <ReadReceiptAvatars
+              receipts={readReceipts}
+              currentUserId={currentUserId}
+            />
+          </div>
+        )}
       </div>
     </motion.div>
   );
