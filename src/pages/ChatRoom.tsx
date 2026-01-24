@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useLayoutEffect } from "react";
+import { useEffect, useState, useRef, useLayoutEffect, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -7,14 +7,16 @@ import {
   MoreVertical,
   Trash2,
   LogOut,
+  User,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMessages } from "@/hooks/useMessages";
 import { useGroupMembers } from "@/hooks/useGroupMembers";
 import { usePresence } from "@/hooks/usePresence";
+import { useReadReceipts } from "@/hooks/useReadReceipts";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   DropdownMenu,
@@ -51,6 +53,11 @@ export default function ChatRoom() {
   const { messages, loading: messagesLoading, sendMessage } = useMessages(groupId || null);
   const { members, loading: membersLoading } = useGroupMembers(groupId || null);
   const { typingUsers, onlineCount, startTyping, isUserOnline, isUserTyping } = usePresence(groupId || null);
+  
+  // Get message IDs for read receipts
+  const messageIds = useMemo(() => messages.map((m) => m.id), [messages]);
+  const { readReceipts, markAllAsRead } = useReadReceipts(groupId || null, messageIds);
+  
   const [group, setGroup] = useState<GroupInfo | null>(null);
   const [showMembers, setShowMembers] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -82,7 +89,11 @@ export default function ChatRoom() {
 
   useLayoutEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    // Mark messages as read when viewing
+    if (messages.length > 0) {
+      markAllAsRead();
+    }
+  }, [messages, markAllAsRead]);
 
   const handleSendMessage = async (
     content: string,
@@ -206,6 +217,10 @@ export default function ChatRoom() {
                   <LogOut className="w-4 h-4 mr-2" />
                   Leave group
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/profile")}>
+                  <User className="w-4 h-4 mr-2" />
+                  Profile
+                </DropdownMenuItem>
                 {isOwner && (
                   <DropdownMenuItem
                     onClick={() => setShowDeleteDialog(true)}
@@ -262,15 +277,17 @@ export default function ChatRoom() {
                       (index === 0 ||
                         messages[index - 1]?.user_id !== message.user_id);
 
-                    return (
-                      <MessageBubble
-                        key={message.id}
-                        message={message}
-                        isOwn={isOwnMessage}
-                        showAvatar={showAvatar}
-                        showName={showName}
-                      />
-                    );
+                      return (
+                        <MessageBubble
+                          key={message.id}
+                          message={message}
+                          isOwn={isOwnMessage}
+                          showAvatar={showAvatar}
+                          showName={showName}
+                          readReceipts={readReceipts[message.id] || []}
+                          currentUserId={user?.id}
+                        />
+                      );
                   })}
                 </AnimatePresence>
                 <div ref={messagesEndRef} />
