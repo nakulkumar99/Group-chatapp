@@ -7,7 +7,9 @@ interface Profile {
   user_id: string;
   username: string;
   avatar_url: string | null;
+  bio: string | null;
   created_at: string;
+  updated_at: string;
 }
 
 export function useProfile() {
@@ -18,6 +20,7 @@ export function useProfile() {
   useEffect(() => {
     if (user) {
       fetchProfile();
+      subscribeToProfileChanges();
     } else {
       setProfile(null);
       setLoading(false);
@@ -39,5 +42,44 @@ export function useProfile() {
     setLoading(false);
   };
 
-  return { profile, loading, refetch: fetchProfile };
+  const subscribeToProfileChanges = () => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel("profile_changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "profiles",
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          setProfile(payload.new as Profile);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  };
+
+  const updateProfile = async (updates: Partial<Pick<Profile, "username" | "avatar_url" | "bio">>) => {
+    if (!user) return { error: new Error("Not authenticated") };
+
+    const { error } = await supabase
+      .from("profiles")
+      .update(updates)
+      .eq("user_id", user.id);
+
+    if (!error) {
+      await fetchProfile();
+    }
+
+    return { error };
+  };
+
+  return { profile, loading, refetch: fetchProfile, updateProfile };
 }
