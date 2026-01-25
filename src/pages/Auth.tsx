@@ -188,11 +188,11 @@ export default function Auth() {
       </div>
 
       {view === "signin" && (
-        <div className="text-right">
+        <div className="flex justify-end mt-1">
           <button
             type="button"
             onClick={() => setView("forgot")}
-            className="text-sm text-primary hover:underline"
+            className="text-sm text-[hsl(199,89%,48%)] hover:text-[hsl(199,89%,58%)] hover:underline transition-colors"
           >
             Forgot password?
           </button>

@@ -67,11 +67,9 @@ export default function Index() {
               className="hover:bg-white/10 p-0 w-10 h-10"
             >
               <Avatar className="w-9 h-9 border-2 border-white/20">
-                {profile?.avatar_url ? (
-                  <AvatarImage src={profile.avatar_url} alt={profile.username} />
-                ) : null}
-                <AvatarFallback className="bg-[hsl(149,67%,38%)] text-white text-xs">
-                  {getInitials(profile?.username || user.email || "U")}
+                <AvatarImage src={profile?.avatar_url || ""} alt={profile?.username || "User"} />
+                <AvatarFallback className="bg-[hsl(149,67%,38%)] text-white text-xs font-semibold">
+                  {profile?.username ? getInitials(profile.username) : user.email?.slice(0, 2).toUpperCase() || "U"}
                 </AvatarFallback>
               </Avatar>
             </Button>
