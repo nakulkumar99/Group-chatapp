@@ -216,7 +216,12 @@ export default function Profile() {
               animate={{ opacity: 1 }}
               className="glass-card rounded-xl p-6"
             >
-              <ProfileImagesGallery />
+              <ProfileImagesGallery 
+                onSelectAsAvatar={(imageUrl) => {
+                  setSelectedAvatar(imageUrl);
+                  setActiveTab("profile");
+                }}
+              />
             </motion.div>
           </TabsContent>
 

@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Trash2, Loader2, Image as ImageIcon, X } from "lucide-react";
+import { Plus, Trash2, Loader2, Image as ImageIcon, X, UserCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useProfileImages } from "@/hooks/useProfileImages";
 import { toast } from "sonner";
@@ -15,7 +15,11 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-export function ProfileImagesGallery() {
+interface ProfileImagesGalleryProps {
+  onSelectAsAvatar?: (imageUrl: string) => void;
+}
+
+export function ProfileImagesGallery({ onSelectAsAvatar }: ProfileImagesGalleryProps) {
   const { images, loading, uploading, uploadImage, deleteImage } = useProfileImages();
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; url: string } | null>(null);
@@ -119,15 +123,30 @@ export function ProfileImagesGallery() {
                   className="w-full h-full object-cover"
                 />
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors" />
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setDeleteConfirm({ id: image.id, url: image.image_url });
-                  }}
-                  className="absolute top-2 right-2 w-8 h-8 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                <div className="absolute top-2 right-2 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {onSelectAsAvatar && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSelectAsAvatar(image.image_url);
+                        toast.success("Image set as avatar - click Save to apply");
+                      }}
+                      className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center"
+                      title="Set as avatar"
+                    >
+                      <UserCircle className="w-4 h-4" />
+                    </button>
+                  )}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDeleteConfirm({ id: image.id, url: image.image_url });
+                    }}
+                    className="w-8 h-8 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </motion.div>
             ))}
           </AnimatePresence>

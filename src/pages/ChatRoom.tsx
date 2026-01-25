@@ -201,19 +201,32 @@ export default function ChatRoom() {
             >
               <Users className="w-5 h-5" />
             </Button>
+            
+            {/* Exit button visible on desktop */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleLeave}
+              className="hidden md:flex hover:bg-white/10 text-white gap-1.5"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>Exit</span>
+            </Button>
+            
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="hover:bg-white/10 text-white">
                   <MoreVertical className="w-5 h-5" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuContent align="end" className="w-48 bg-popover">
                 <DropdownMenuItem onClick={() => setShowMembers(!showMembers)}>
                   <Users className="w-4 h-4 mr-2" />
                   {showMembers ? "Hide members" : "View members"}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLeave} className="text-destructive focus:text-destructive">
+                {/* Leave group - visible in dropdown on mobile only */}
+                <DropdownMenuItem onClick={handleLeave} className="md:hidden text-destructive focus:text-destructive">
                   <LogOut className="w-4 h-4 mr-2" />
                   Leave group
                 </DropdownMenuItem>
