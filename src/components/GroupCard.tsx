@@ -1,5 +1,6 @@
+import { forwardRef } from "react";
 import { motion } from "framer-motion";
-import { Users, MessageCircle, UserPlus, UserMinus, Check, CheckCheck } from "lucide-react";
+import { Users, UserPlus, UserMinus, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
@@ -14,7 +15,7 @@ interface GroupCardProps {
   onOpen: (id: string) => void;
 }
 
-export function GroupCard({
+export const GroupCard = forwardRef<HTMLDivElement, GroupCardProps>(function GroupCard({
   id,
   name,
   description,
@@ -23,7 +24,7 @@ export function GroupCard({
   onJoin,
   onLeave,
   onOpen,
-}: GroupCardProps) {
+}, ref) {
   const getInitials = (text: string) => {
     return text
       .split(" ")
@@ -35,6 +36,7 @@ export function GroupCard({
 
   return (
     <motion.div
+      ref={ref}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       whileHover={{ scale: 1.01 }}
@@ -100,4 +102,4 @@ export function GroupCard({
       </div>
     </motion.div>
   );
-}
+});
