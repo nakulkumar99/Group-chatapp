@@ -192,7 +192,7 @@ export default function ChatRoom() {
             </div>
           </div>
 
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             <Button
               variant="ghost"
               size="icon"
@@ -202,15 +202,15 @@ export default function ChatRoom() {
               <Users className="w-5 h-5" />
             </Button>
             
-            {/* Exit button visible on desktop */}
+            {/* Exit button - always visible on desktop (md and up) */}
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
               onClick={handleLeave}
-              className="hidden md:flex hover:bg-white/10 text-white gap-1.5"
+              className="hidden md:inline-flex items-center gap-1.5 border-white/30 bg-transparent text-white hover:bg-white/10 hover:text-white"
             >
               <LogOut className="w-4 h-4" />
-              <span>Exit</span>
+              Exit
             </Button>
             
             <DropdownMenu>
