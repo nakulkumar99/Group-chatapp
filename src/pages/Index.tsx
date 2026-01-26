@@ -8,6 +8,7 @@ import { useGroups } from "@/hooks/useGroups";
 import { useProfile } from "@/hooks/useProfile";
 import { GroupCard } from "@/components/GroupCard";
 import { CreateGroupModal } from "@/components/CreateGroupModal";
+import { QuickAvatarUploader } from "@/components/QuickAvatarUploader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -16,8 +17,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 export default function Index() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
-  const { profile } = useProfile();
+  const { profile, updateProfile } = useProfile();
   const { groups, myGroups, loading: groupsLoading, createGroup, joinGroup, leaveGroup } = useGroups();
+  const [showAvatarUploader, setShowAvatarUploader] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -69,7 +71,7 @@ export default function Index() {
             <Button 
               variant="ghost" 
               size="icon" 
-              onClick={() => navigate("/profile")} 
+              onClick={() => setShowAvatarUploader(true)} 
               className="hover:bg-white/10 p-0 w-10 h-10"
             >
               <Avatar className="w-9 h-9 border-2 border-white/20">
@@ -185,6 +187,19 @@ export default function Index() {
           />
         )}
       </AnimatePresence>
+
+      {user && (
+        <QuickAvatarUploader
+          isOpen={showAvatarUploader}
+          onClose={() => setShowAvatarUploader(false)}
+          userId={user.id}
+          currentAvatar={profile?.avatar_url || null}
+          username={profile?.username || "User"}
+          onAvatarChange={async (url) => {
+            await updateProfile({ avatar_url: url });
+          }}
+        />
+      )}
     </div>
   );
 }
