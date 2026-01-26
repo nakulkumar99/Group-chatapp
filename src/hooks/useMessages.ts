@@ -13,6 +13,7 @@ interface Message {
   file_url?: string | null;
   file_type?: string | null;
   file_name?: string | null;
+  edited_at?: string | null;
   profile?: {
     username: string;
     avatar_url: string | null;
@@ -138,10 +139,35 @@ export function useMessages(groupId: string | null) {
     return { error: null };
   };
 
+  const editMessage = async (messageId: string, newContent: string) => {
+    if (!user) return;
+
+    const { error } = await supabase
+      .from("messages")
+      .update({ content: newContent, edited_at: new Date().toISOString() })
+      .eq("id", messageId)
+      .eq("user_id", user.id);
+
+    if (error) {
+      toast.error("Failed to edit message");
+      return;
+    }
+
+    // Update local state
+    setMessages((prev) =>
+      prev.map((msg) =>
+        msg.id === messageId
+          ? { ...msg, content: newContent, edited_at: new Date().toISOString() }
+          : msg
+      )
+    );
+  };
+
   return {
     messages,
     loading,
     sendMessage,
+    editMessage,
     refetch: fetchMessages,
   };
 }

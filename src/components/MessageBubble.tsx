@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { CheckCheck, Download, FileText, Play, Image as ImageIcon, X } from "lucide-react";
+import { CheckCheck, Download, FileText, Play, Image as ImageIcon, X, Pencil, Check } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -27,6 +28,7 @@ interface MessageBubbleProps {
     file_url?: string | null;
     file_type?: string | null;
     file_name?: string | null;
+    edited_at?: string | null;
     profile?: {
       username: string;
       avatar_url: string | null;
@@ -37,10 +39,13 @@ interface MessageBubbleProps {
   showName: boolean;
   readReceipts?: ReadReceipt[];
   currentUserId?: string;
+  onEdit?: (messageId: string, newContent: string) => Promise<void>;
 }
 
-export function MessageBubble({ message, isOwn, showAvatar, showName, readReceipts = [], currentUserId }: MessageBubbleProps) {
+export function MessageBubble({ message, isOwn, showAvatar, showName, readReceipts = [], currentUserId, onEdit }: MessageBubbleProps) {
   const [imagePreview, setImagePreview] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editContent, setEditContent] = useState(message.content);
 
   const getInitials = (name: string) => {
     return name
@@ -80,6 +85,20 @@ export function MessageBubble({ message, isOwn, showAvatar, showName, readReceip
     } catch {
       window.open(message.file_url, "_blank");
     }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!onEdit || editContent.trim() === message.content) {
+      setIsEditing(false);
+      return;
+    }
+    await onEdit(message.id, editContent.trim());
+    setIsEditing(false);
+  };
+
+  const handleCancelEdit = () => {
+    setEditContent(message.content);
+    setIsEditing(false);
   };
 
   const renderFileContent = () => {
@@ -209,17 +228,52 @@ export function MessageBubble({ message, isOwn, showAvatar, showName, readReceip
           </p>
         )}
         <div
-          className={`px-3 py-2 relative ${
+          className={`px-3 py-2 relative group ${
             isOwn ? "message-bubble-own" : "message-bubble-other"
           }`}
         >
           {renderFileContent()}
-          {message.content && (
-            <p className={`text-sm break-words ${message.file_url ? "" : "pr-12"}`}>
-              {message.content}
-            </p>
+          {isEditing ? (
+            <div className="flex items-center gap-2">
+              <Input
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+                className="text-sm bg-transparent border-white/30 text-inherit h-8"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleSaveEdit();
+                  if (e.key === "Escape") handleCancelEdit();
+                }}
+              />
+              <Button size="icon" variant="ghost" className="h-6 w-6" onClick={handleSaveEdit}>
+                <Check className="w-4 h-4" />
+              </Button>
+              <Button size="icon" variant="ghost" className="h-6 w-6" onClick={handleCancelEdit}>
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          ) : (
+            <>
+              {message.content && (
+                <p className={`text-sm break-words ${message.file_url ? "" : "pr-12"}`}>
+                  {message.content}
+                </p>
+              )}
+              {/* Edit button - only show for own text messages */}
+              {isOwn && message.content && !message.file_url && onEdit && (
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="absolute -left-8 top-1/2 -translate-y-1/2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"
+                  onClick={() => setIsEditing(true)}
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                </Button>
+              )}
+            </>
           )}
           <span className={`absolute bottom-1 right-2 text-[10px] flex items-center gap-1 ${isOwn ? "text-white/60" : "text-muted-foreground"}`}>
+            {message.edited_at && <span className="italic">edited</span>}
             {formatTime(message.created_at)}
             {isOwn && <CheckCheck className={`w-3.5 h-3.5 ${readReceipts.length > 0 ? "text-blue-300" : "text-white/40"}`} />}
           </span>
