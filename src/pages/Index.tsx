@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageCircle, Plus, Search, User } from "lucide-react";
+import { MessageCircle, Plus, Search, LogOut } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useGroups } from "@/hooks/useGroups";
 import { useProfile } from "@/hooks/useProfile";
@@ -19,6 +20,11 @@ export default function Index() {
   const { groups, myGroups, loading: groupsLoading, createGroup, joinGroup, leaveGroup } = useGroups();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate("/auth");
+  };
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -72,6 +78,15 @@ export default function Index() {
                   {profile?.username ? getInitials(profile.username) : user.email?.slice(0, 2).toUpperCase() || "U"}
                 </AvatarFallback>
               </Avatar>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleLogout}
+              className="items-center gap-1.5 border-white/30 bg-transparent text-white hover:bg-white/10 hover:text-white"
+            >
+              <LogOut className="w-4 h-4" />
+              Exit
             </Button>
           </div>
         </div>

@@ -50,7 +50,7 @@ export default function ChatRoom() {
   const { groupId } = useParams<{ groupId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { messages, loading: messagesLoading, sendMessage } = useMessages(groupId || null);
+  const { messages, loading: messagesLoading, sendMessage, editMessage } = useMessages(groupId || null);
   const { members, loading: membersLoading } = useGroupMembers(groupId || null);
   const { typingUsers, onlineCount, startTyping, isUserOnline, isUserTyping } = usePresence(groupId || null);
   
@@ -299,6 +299,7 @@ export default function ChatRoom() {
                           showName={showName}
                           readReceipts={readReceipts[message.id] || []}
                           currentUserId={user?.id}
+                          onEdit={editMessage}
                         />
                       );
                   })}
