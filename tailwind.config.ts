@@ -64,6 +64,11 @@ export default {
         online: "hsl(var(--online-indicator))",
         "hover-overlay": "hsl(var(--hover-overlay))",
         divider: "hsl(var(--divider))",
+        whatsapp: {
+          green: "hsl(var(--whatsapp-green))",
+          teal: "hsl(var(--whatsapp-teal))",
+          dark: "hsl(var(--whatsapp-dark))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
