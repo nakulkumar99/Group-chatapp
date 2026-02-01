@@ -40,6 +40,9 @@ export function useFileUpload() {
       "video/webm",
       "audio/mpeg",
       "audio/wav",
+      "audio/webm",
+      "audio/mp4",
+      "audio/ogg",
     ];
 
     if (!allowedTypes.includes(file.type)) {
