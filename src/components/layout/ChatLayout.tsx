@@ -85,7 +85,7 @@ function ChatLayoutContent() {
       />
 
       {/* Settings Panel */}
-      <SettingsPanel isOpen={showSettings} onClose={() => setShowSettings(false)} />
+      <SettingsPanel isOpen={showSettings} onClose={() => setShowSettings(false)} groupId={selectedGroupId} />
 
       {/* Avatar Uploader */}
       {user && (

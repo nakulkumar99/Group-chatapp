@@ -6,14 +6,18 @@ import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useThemeContext } from "./ThemeProvider";
+import { AdminSettingsPanel } from "@/components/AdminSettingsPanel";
+import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
 interface SettingsPanelProps {
   isOpen: boolean;
   onClose: () => void;
+  groupId?: string | null;
 }
 
-export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
+export function SettingsPanel({ isOpen, onClose, groupId }: SettingsPanelProps) {
+  const { user } = useAuth();
   const {
     theme,
     toggleTheme,
@@ -82,6 +86,14 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
 
           {/* Content */}
           <div className="flex-1 overflow-y-auto p-4 space-y-6">
+            {/* Admin Controls - only show if groupId is provided */}
+            {groupId && user && (
+              <>
+                <AdminSettingsPanel groupId={groupId} currentUserId={user.id} />
+                <Separator />
+              </>
+            )}
+
             {/* Theme Toggle */}
             <div className="space-y-3">
               <Label className="text-sm font-medium text-foreground">
@@ -129,7 +141,7 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                     }`}
                     style={{
                       backgroundImage: `url("${preset.url}")`,
-                      backgroundColor: theme === "dark" ? "#1a1a2e" : "#f5f5f5",
+                      backgroundColor: theme === "dark" ? "hsl(var(--muted))" : "hsl(var(--background))",
                     }}
                   >
                     {wallpaper.type === "preset" && wallpaper.value === preset.id && (
@@ -214,10 +226,7 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                 Preview
               </Label>
               <div
-                className="h-32 rounded-lg border border-border overflow-hidden relative"
-                style={{
-                  backgroundColor: theme === "dark" ? "#0a0a0a" : "#ffffff",
-                }}
+                className="h-32 rounded-lg border border-border overflow-hidden relative bg-background"
               >
                 {wallpaper.type !== "none" && (
                   <div
@@ -238,7 +247,7 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                     <div className="bg-accent text-foreground text-xs px-3 py-1.5 rounded-lg rounded-tl-none max-w-[120px]">
                       Hello there!
                     </div>
-                    <div className="bg-chat-own text-primary-foreground text-xs px-3 py-1.5 rounded-lg rounded-tr-none max-w-[120px] self-end">
+                    <div className="bg-primary text-primary-foreground text-xs px-3 py-1.5 rounded-lg rounded-tr-none max-w-[120px] self-end">
                       Hi! How are you?
                     </div>
                   </div>
