@@ -32,6 +32,15 @@ export function QuickAvatarUploader({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Clear preview when dialog closes
+  const handleClose = () => {
+    setPreviewUrl(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+    onClose();
+  };
+
   const getInitials = (name: string) => {
     return name
       .split(" ")
@@ -45,6 +54,11 @@ export function QuickAvatarUploader({
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Reset input to allow re-uploading same file
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+
     const validTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
     if (!validTypes.includes(file.type)) {
       toast.error("Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed.");
@@ -57,28 +71,36 @@ export function QuickAvatarUploader({
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setPreviewUrl(e.target?.result as string);
-    };
-    reader.readAsDataURL(file);
+    // Create preview immediately for instant feedback
+    const previewDataUrl = URL.createObjectURL(file);
+    setPreviewUrl(previewDataUrl);
 
     setUploading(true);
 
     try {
-      const fileExt = file.name.split(".").pop();
+      const fileExt = file.name.split(".").pop()?.toLowerCase() || "jpg";
       const fileName = `${userId}/avatar-${Date.now()}.${fileExt}`;
 
+      // Delete old avatar if it's a custom upload
       if (currentAvatar?.includes("profile-images")) {
-        const oldPath = currentAvatar.split("/profile-images/")[1];
-        if (oldPath) {
-          await supabase.storage.from("profile-images").remove([oldPath]);
+        try {
+          const url = new URL(currentAvatar.split("?")[0]); // Remove query params
+          const pathMatch = url.pathname.match(/\/profile-images\/(.+)/);
+          if (pathMatch && pathMatch[1]) {
+            const oldPath = decodeURIComponent(pathMatch[1]);
+            await supabase.storage.from("profile-images").remove([oldPath]);
+          }
+        } catch {
+          // Ignore URL parsing errors for old avatars
         }
       }
 
       const { error: uploadError } = await supabase.storage
         .from("profile-images")
-        .upload(fileName, file);
+        .upload(fileName, file, {
+          cacheControl: "3600",
+          upsert: false,
+        });
 
       if (uploadError) throw uploadError;
 
@@ -86,35 +108,46 @@ export function QuickAvatarUploader({
         .from("profile-images")
         .getPublicUrl(fileName);
 
-      onAvatarChange(urlData.publicUrl);
+      // Add cache-busting query param for immediate display
+      const publicUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+      
+      onAvatarChange(publicUrl);
       toast.success("Avatar uploaded successfully!");
-      onClose();
+      handleClose();
     } catch (error) {
       console.error("Upload error:", error);
-      toast.error("Failed to upload avatar");
+      toast.error("Failed to upload avatar. Please try again.");
       setPreviewUrl(null);
     } finally {
       setUploading(false);
+      // Clean up object URL
+      URL.revokeObjectURL(previewDataUrl);
     }
   };
 
   const handleRemoveAvatar = async () => {
     if (currentAvatar?.includes("profile-images")) {
-      const filePath = currentAvatar.split("/profile-images/")[1];
-      if (filePath) {
-        await supabase.storage.from("profile-images").remove([filePath]);
+      try {
+        const url = new URL(currentAvatar.split("?")[0]); // Remove query params
+        const pathMatch = url.pathname.match(/\/profile-images\/(.+)/);
+        if (pathMatch && pathMatch[1]) {
+          const filePath = decodeURIComponent(pathMatch[1]);
+          await supabase.storage.from("profile-images").remove([filePath]);
+        }
+      } catch {
+        // Ignore URL parsing errors
       }
     }
     onAvatarChange(null);
     setPreviewUrl(null);
     toast.success("Avatar removed");
-    onClose();
+    handleClose();
   };
 
   const displayAvatar = previewUrl || currentAvatar;
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent className="sm:max-w-xs">
         <DialogHeader>
           <DialogTitle className="text-center">Change Profile Photo</DialogTitle>
