@@ -1,7 +1,6 @@
 import { useEffect, useRef, useLayoutEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ArrowLeft,
   Users,
   MoreVertical,
   Trash2,
@@ -10,6 +9,7 @@ import {
   Menu,
   Settings,
   MessageCircle,
+  ShieldAlert,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -17,6 +17,9 @@ import { useMessages } from "@/hooks/useMessages";
 import { useGroupMembers } from "@/hooks/useGroupMembers";
 import { usePresence } from "@/hooks/usePresence";
 import { useReadReceipts } from "@/hooks/useReadReceipts";
+import { useReactions } from "@/hooks/useReactions";
+import { useGroupRole } from "@/hooks/useGroupRole";
+import { usePinnedMessages } from "@/hooks/usePinnedMessages";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -40,6 +43,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { MessageBubble } from "@/components/MessageBubble";
 import { ChatInput } from "@/components/ChatInput";
+import { PinnedMessagesBar } from "@/components/PinnedMessagesBar";
 import { useThemeContext } from "./ThemeProvider";
 import { toast } from "sonner";
 
@@ -69,13 +73,16 @@ export function ChatArea({
 }: ChatAreaProps) {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { wallpaper, presets, getWallpaperStyle } = useThemeContext();
+  const { wallpaper, getWallpaperStyle } = useThemeContext();
   const { messages, loading: messagesLoading, sendMessage, editMessage } = useMessages(groupId);
   const { members } = useGroupMembers(groupId);
   const { typingUsers, onlineCount, startTyping } = usePresence(groupId);
+  const { isAdmin, canSendMessages } = useGroupRole(groupId);
 
   const messageIds = useMemo(() => messages.map((m) => m.id), [messages]);
   const { readReceipts, markAllAsRead } = useReadReceipts(groupId, messageIds);
+  const { toggleReaction, getReactionGroups } = useReactions(groupId, messageIds);
+  const { pinMessage, unpinMessage, isMessagePinned } = usePinnedMessages(groupId);
 
   const [group, setGroup] = useState<GroupInfo | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -152,6 +159,14 @@ export function ChatArea({
 
     toast.success("Group deleted successfully");
     navigate("/");
+  };
+
+  const handlePinMessage = async (messageId: string) => {
+    if (isMessagePinned(messageId)) {
+      await unpinMessage(messageId);
+    } else {
+      await pinMessage(messageId);
+    }
   };
 
   const getInitials = (name: string) => {
@@ -287,6 +302,9 @@ export function ChatArea({
         </div>
       </header>
 
+      {/* Pinned Messages */}
+      <PinnedMessagesBar groupId={groupId} isAdmin={isAdmin} />
+
       {/* Messages Area with Wallpaper */}
       <div
         className="flex-1 flex flex-col relative overflow-hidden"
@@ -339,6 +357,11 @@ export function ChatArea({
                       readReceipts={readReceipts[message.id] || []}
                       currentUserId={user?.id}
                       onEdit={editMessage}
+                      onReact={toggleReaction}
+                      onPin={handlePinMessage}
+                      reactionGroups={getReactionGroups(message.id)}
+                      isPinned={isMessagePinned(message.id)}
+                      isAdmin={isAdmin}
                     />
                   );
                 })}
@@ -350,7 +373,14 @@ export function ChatArea({
 
         {/* Chat Input */}
         <div className="relative z-10 bg-card/80 backdrop-blur-sm border-t border-border">
-          <ChatInput onSend={handleSendMessage} onTyping={startTyping} />
+          {canSendMessages ? (
+            <ChatInput onSend={handleSendMessage} onTyping={startTyping} />
+          ) : (
+            <div className="p-4 flex items-center justify-center gap-2 text-muted-foreground">
+              <ShieldAlert className="w-5 h-5" />
+              <span className="text-sm">Only admins can send messages in this group</span>
+            </div>
+          )}
         </div>
       </div>
 

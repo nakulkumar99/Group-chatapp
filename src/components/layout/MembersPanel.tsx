@@ -1,10 +1,11 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { Users, X } from "lucide-react";
+import { Users, X, Crown, ShieldCheck, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useGroupMembers } from "@/hooks/useGroupMembers";
 import { usePresence } from "@/hooks/usePresence";
+import { useGroupRole } from "@/hooks/useGroupRole";
 
 interface MembersPanelProps {
   groupId: string | null;
@@ -25,6 +26,7 @@ export function MembersPanel({
 }: MembersPanelProps) {
   const { members, loading } = useGroupMembers(groupId);
   const { onlineCount, isUserOnline, isUserTyping } = usePresence(groupId);
+  const { groupRoles } = useGroupRole(groupId);
 
   const getInitials = (name: string) => {
     return name
@@ -33,6 +35,34 @@ export function MembersPanel({
       .join("")
       .toUpperCase()
       .slice(0, 2);
+  };
+
+  const getMemberRoleIcon = (userId: string) => {
+    if (userId === creatorId) {
+      return <Crown className="w-3.5 h-3.5 text-amber-500" />;
+    }
+    const role = groupRoles.find((r) => r.user_id === userId);
+    if (role?.role === "admin") {
+      return <ShieldCheck className="w-3.5 h-3.5 text-primary" />;
+    }
+    if (role?.role === "moderator") {
+      return <Shield className="w-3.5 h-3.5 text-sky-500" />;
+    }
+    return null;
+  };
+
+  const getMemberRoleLabel = (userId: string) => {
+    if (userId === creatorId) {
+      return "Owner";
+    }
+    const role = groupRoles.find((r) => r.user_id === userId);
+    if (role?.role === "admin") {
+      return "Admin";
+    }
+    if (role?.role === "moderator") {
+      return "Moderator";
+    }
+    return null;
   };
 
   const panelContent = (
@@ -72,6 +102,8 @@ export function MembersPanel({
             {members.map((member) => {
               const memberIsOnline = isUserOnline(member.user_id);
               const memberIsTyping = isUserTyping(member.user_id);
+              const roleIcon = getMemberRoleIcon(member.user_id);
+              const roleLabel = getMemberRoleLabel(member.user_id);
 
               return (
                 <motion.div
@@ -94,13 +126,16 @@ export function MembersPanel({
                     />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm text-foreground truncate">
-                      {member.profile?.username || "Unknown"}
-                    </p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="font-medium text-sm text-foreground truncate">
+                        {member.profile?.username || "Unknown"}
+                      </p>
+                      {roleIcon}
+                    </div>
                     {memberIsTyping ? (
                       <span className="text-xs text-primary animate-pulse">typing...</span>
-                    ) : member.user_id === creatorId ? (
-                      <span className="text-xs text-primary">Admin</span>
+                    ) : roleLabel ? (
+                      <span className="text-xs text-primary">{roleLabel}</span>
                     ) : member.user_id === currentUserId ? (
                       <span className="text-xs text-muted-foreground">You</span>
                     ) : memberIsOnline ? (

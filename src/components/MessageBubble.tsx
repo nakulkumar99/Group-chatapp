@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { CheckCheck, Download, FileText, Play, Image as ImageIcon, X, Pencil, Check } from "lucide-react";
+import { CheckCheck, Download, FileText, Play, Image as ImageIcon, X, Pencil, Check, Pin } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,7 @@ import {
   DialogContent,
 } from "@/components/ui/dialog";
 import { ReadReceiptAvatars } from "./ReadReceiptAvatars";
+import { EmojiReactionPicker, ReactionDisplay } from "./EmojiReactionPicker";
 
 interface ReadReceipt {
   id: string;
@@ -17,6 +18,13 @@ interface ReadReceipt {
     username: string;
     avatar_url: string | null;
   };
+}
+
+interface ReactionGroup {
+  emoji: string;
+  count: number;
+  users: Array<{ username: string }>;
+  hasReacted: boolean;
 }
 
 interface MessageBubbleProps {
@@ -40,12 +48,31 @@ interface MessageBubbleProps {
   readReceipts?: ReadReceipt[];
   currentUserId?: string;
   onEdit?: (messageId: string, newContent: string) => Promise<void>;
+  onReact?: (messageId: string, emoji: string) => void;
+  onPin?: (messageId: string) => void;
+  reactionGroups?: ReactionGroup[];
+  isPinned?: boolean;
+  isAdmin?: boolean;
 }
 
-export function MessageBubble({ message, isOwn, showAvatar, showName, readReceipts = [], currentUserId, onEdit }: MessageBubbleProps) {
+export function MessageBubble({ 
+  message, 
+  isOwn, 
+  showAvatar, 
+  showName, 
+  readReceipts = [], 
+  currentUserId, 
+  onEdit,
+  onReact,
+  onPin,
+  reactionGroups = [],
+  isPinned = false,
+  isAdmin = false,
+}: MessageBubbleProps) {
   const [imagePreview, setImagePreview] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
+  const [showActions, setShowActions] = useState(false);
 
   const getInitials = (name: string) => {
     return name
@@ -161,9 +188,9 @@ export function MessageBubble({ message, isOwn, showAvatar, showName, readReceip
 
     if (isAudio) {
       return (
-        <div className="flex items-center gap-3 bg-black/10 rounded-full px-4 py-2 mb-1">
-          <div className="w-10 h-10 rounded-full bg-[hsl(149,67%,38%)] flex items-center justify-center">
-            <Play className="w-5 h-5 text-white" fill="white" />
+        <div className="flex items-center gap-3 bg-accent/30 rounded-full px-4 py-2 mb-1">
+          <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
+            <Play className="w-5 h-5 text-primary-foreground" fill="currentColor" />
           </div>
           <audio
             src={message.file_url}
@@ -180,11 +207,11 @@ export function MessageBubble({ message, isOwn, showAvatar, showName, readReceip
     if (isDocument) {
       return (
         <div 
-          className="flex items-center gap-3 bg-black/10 rounded-xl px-4 py-3 mb-1 cursor-pointer hover:bg-black/20 transition-colors"
+          className="flex items-center gap-3 bg-accent/30 rounded-xl px-4 py-3 mb-1 cursor-pointer hover:bg-accent/50 transition-colors"
           onClick={handleDownload}
         >
-          <div className="w-10 h-10 rounded-lg bg-[hsl(149,67%,38%)] flex items-center justify-center shrink-0">
-            <FileText className="w-5 h-5 text-white" />
+          <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center shrink-0">
+            <FileText className="w-5 h-5 text-primary-foreground" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium truncate text-foreground">
@@ -209,13 +236,15 @@ export function MessageBubble({ message, isOwn, showAvatar, showName, readReceip
       exit={{ opacity: 0, scale: 0.95 }}
       transition={{ duration: 0.2 }}
       className={`flex gap-2 ${isOwn ? "justify-end" : "justify-start"}`}
+      onMouseEnter={() => setShowActions(true)}
+      onMouseLeave={() => setShowActions(false)}
     >
       {!isOwn && showAvatar && (
         <Avatar className="w-8 h-8 shrink-0 mt-auto">
           {message.profile?.avatar_url ? (
             <AvatarImage src={message.profile.avatar_url} alt={message.profile.username} />
           ) : null}
-          <AvatarFallback className="bg-[hsl(149,67%,38%)] text-white text-xs">
+          <AvatarFallback className="bg-primary text-primary-foreground text-xs">
             {getInitials(message.profile?.username || "U")}
           </AvatarFallback>
         </Avatar>
@@ -223,60 +252,109 @@ export function MessageBubble({ message, isOwn, showAvatar, showName, readReceip
       {!isOwn && !showAvatar && <div className="w-8 shrink-0" />}
       <div className={`max-w-[75%] ${isOwn ? "items-end" : "items-start"}`}>
         {showName && (
-          <p className="text-xs text-[hsl(149,67%,45%)] mb-1 ml-2 font-medium">
+          <p className="text-xs text-primary mb-1 ml-2 font-medium">
             {message.profile?.username || "Unknown"}
           </p>
         )}
-        <div
-          className={`px-3 py-2 relative group ${
-            isOwn ? "message-bubble-own" : "message-bubble-other"
-          }`}
-        >
-          {renderFileContent()}
-          {isEditing ? (
-            <div className="flex items-center gap-2">
-              <Input
-                value={editContent}
-                onChange={(e) => setEditContent(e.target.value)}
-                className="text-sm bg-transparent border-white/30 text-inherit h-8"
-                autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleSaveEdit();
-                  if (e.key === "Escape") handleCancelEdit();
-                }}
-              />
-              <Button size="icon" variant="ghost" className="h-6 w-6" onClick={handleSaveEdit}>
-                <Check className="w-4 h-4" />
-              </Button>
-              <Button size="icon" variant="ghost" className="h-6 w-6" onClick={handleCancelEdit}>
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-          ) : (
-            <>
-              {message.content && (
-                <p className={`text-sm break-words ${message.file_url ? "" : "pr-12"}`}>
-                  {message.content}
-                </p>
+        <div className="relative">
+          {/* Action buttons */}
+          {showActions && !isEditing && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className={`absolute top-0 flex items-center gap-1 z-10 ${
+                isOwn ? "-left-24" : "-right-24"
+              }`}
+            >
+              {onReact && (
+                <EmojiReactionPicker onSelect={(emoji) => onReact(message.id, emoji)} />
               )}
-              {/* Edit button - only show for own text messages */}
               {isOwn && message.content && !message.file_url && onEdit && (
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="absolute -left-8 top-1/2 -translate-y-1/2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"
+                  className="h-7 w-7 rounded-full hover:bg-accent"
                   onClick={() => setIsEditing(true)}
                 >
                   <Pencil className="w-3.5 h-3.5" />
                 </Button>
               )}
-            </>
+              {isAdmin && onPin && (
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className={`h-7 w-7 rounded-full hover:bg-accent ${isPinned ? "text-primary" : ""}`}
+                  onClick={() => onPin(message.id)}
+                >
+                  <Pin className={`w-3.5 h-3.5 ${isPinned ? "fill-current" : ""}`} />
+                </Button>
+              )}
+            </motion.div>
           )}
-          <span className={`absolute bottom-1 right-2 text-[10px] flex items-center gap-1 ${isOwn ? "text-white/60" : "text-muted-foreground"}`}>
-            {message.edited_at && <span className="italic">edited</span>}
-            {formatTime(message.created_at)}
-            {isOwn && <CheckCheck className={`w-3.5 h-3.5 ${readReceipts.length > 0 ? "text-blue-300" : "text-white/40"}`} />}
-          </span>
+
+          <div
+            className={`px-3 py-2 relative ${
+              isOwn ? "message-bubble-own" : "message-bubble-other"
+            }`}
+          >
+            {/* Pinned indicator */}
+            {isPinned && (
+              <div className="absolute -top-2 -right-2">
+                <Pin className="w-3 h-3 text-primary fill-current" />
+              </div>
+            )}
+
+            {renderFileContent()}
+            {isEditing ? (
+              <div className="flex items-center gap-2">
+                <Input
+                  value={editContent}
+                  onChange={(e) => setEditContent(e.target.value)}
+                  className="text-sm bg-transparent border-border text-inherit h-8"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleSaveEdit();
+                    if (e.key === "Escape") handleCancelEdit();
+                  }}
+                />
+                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={handleSaveEdit}>
+                  <Check className="w-4 h-4" />
+                </Button>
+                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={handleCancelEdit}>
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            ) : (
+              <>
+                {message.content && (
+                  <p className={`text-sm break-words ${message.file_url ? "" : "pr-12"}`}>
+                    {message.content}
+                  </p>
+                )}
+              </>
+            )}
+            <span className={`absolute bottom-1 right-2 text-[10px] flex items-center gap-1 ${isOwn ? "text-primary-foreground/60" : "text-muted-foreground"}`}>
+              {message.edited_at && <span className="italic">edited</span>}
+              {formatTime(message.created_at)}
+              {isOwn && <CheckCheck className={`w-3.5 h-3.5 ${readReceipts.length > 0 ? "text-sky-400" : "text-primary-foreground/40"}`} />}
+            </span>
+          </div>
+
+          {/* Reactions display */}
+          {reactionGroups.length > 0 && (
+            <div className={`flex flex-wrap gap-1 mt-1 ${isOwn ? "justify-end" : "justify-start"}`}>
+              {reactionGroups.map((group) => (
+                <ReactionDisplay
+                  key={group.emoji}
+                  emoji={group.emoji}
+                  count={group.count}
+                  hasReacted={group.hasReacted}
+                  users={group.users}
+                  onClick={() => onReact?.(message.id, group.emoji)}
+                />
+              ))}
+            </div>
+          )}
         </div>
         {/* Read receipts - only show for own messages */}
         {isOwn && readReceipts.length > 0 && (
