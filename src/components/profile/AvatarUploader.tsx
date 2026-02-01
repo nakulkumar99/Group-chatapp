@@ -55,6 +55,11 @@ export function AvatarUploader({
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Reset input to allow re-uploading same file
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+
     // Validate file type
     const validTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
     if (!validTypes.includes(file.type)) {
@@ -69,30 +74,36 @@ export function AvatarUploader({
       return;
     }
 
-    // Create preview
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setPreviewUrl(e.target?.result as string);
-    };
-    reader.readAsDataURL(file);
+    // Create preview immediately for instant feedback
+    const previewDataUrl = URL.createObjectURL(file);
+    setPreviewUrl(previewDataUrl);
 
     setUploading(true);
 
     try {
-      const fileExt = file.name.split(".").pop();
+      const fileExt = file.name.split(".").pop()?.toLowerCase() || "jpg";
       const fileName = `${userId}/avatar-${Date.now()}.${fileExt}`;
 
       // Delete old avatar if it's a custom upload
       if (currentAvatar?.includes("profile-images")) {
-        const oldPath = currentAvatar.split("/profile-images/")[1];
-        if (oldPath) {
-          await supabase.storage.from("profile-images").remove([oldPath]);
+        try {
+          const url = new URL(currentAvatar);
+          const pathMatch = url.pathname.match(/\/profile-images\/(.+)/);
+          if (pathMatch && pathMatch[1]) {
+            const oldPath = decodeURIComponent(pathMatch[1]);
+            await supabase.storage.from("profile-images").remove([oldPath]);
+          }
+        } catch {
+          // Ignore URL parsing errors for old avatars
         }
       }
 
       const { error: uploadError } = await supabase.storage
         .from("profile-images")
-        .upload(fileName, file);
+        .upload(fileName, file, {
+          cacheControl: "3600",
+          upsert: false,
+        });
 
       if (uploadError) throw uploadError;
 
@@ -100,22 +111,35 @@ export function AvatarUploader({
         .from("profile-images")
         .getPublicUrl(fileName);
 
-      onAvatarChange(urlData.publicUrl);
+      // Add cache-busting query param for immediate display
+      const publicUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+      
+      onAvatarChange(publicUrl);
       toast.success("Avatar uploaded successfully!");
     } catch (error) {
       console.error("Upload error:", error);
-      toast.error("Failed to upload avatar");
+      toast.error("Failed to upload avatar. Please try again.");
       setPreviewUrl(null);
     } finally {
       setUploading(false);
+      // Clean up object URL
+      if (previewDataUrl) {
+        URL.revokeObjectURL(previewDataUrl);
+      }
     }
   };
 
   const handleDeleteAvatar = async () => {
     if (currentAvatar?.includes("profile-images")) {
-      const filePath = currentAvatar.split("/profile-images/")[1];
-      if (filePath) {
-        await supabase.storage.from("profile-images").remove([filePath]);
+      try {
+        const url = new URL(currentAvatar.split("?")[0]); // Remove query params
+        const pathMatch = url.pathname.match(/\/profile-images\/(.+)/);
+        if (pathMatch && pathMatch[1]) {
+          const filePath = decodeURIComponent(pathMatch[1]);
+          await supabase.storage.from("profile-images").remove([filePath]);
+        }
+      } catch {
+        // Ignore URL parsing errors
       }
     }
     onAvatarChange(null);
