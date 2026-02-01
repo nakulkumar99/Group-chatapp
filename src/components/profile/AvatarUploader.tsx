@@ -61,16 +61,16 @@ export function AvatarUploader({
     }
 
     // Validate file type
-    const validTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+    const validTypes = ["image/jpeg", "image/png", "image/gif"];
     if (!validTypes.includes(file.type)) {
-      toast.error("Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed.");
+      toast.error("Invalid file type. Only JPG, PNG, and GIF are allowed.");
       return;
     }
 
-    // Validate file size (max 2MB for avatar)
-    const maxSize = 2 * 1024 * 1024;
+    // Validate file size (max 5MB for avatar)
+    const maxSize = 5 * 1024 * 1024;
     if (file.size > maxSize) {
-      toast.error("File size must be less than 2MB.");
+      toast.error("File size must be less than 5MB.");
       return;
     }
 
@@ -181,7 +181,7 @@ export function AvatarUploader({
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/jpeg,image/png,image/gif,image/webp"
+          accept="image/jpeg,image/png,image/gif"
           onChange={handleFileSelect}
           className="hidden"
         />

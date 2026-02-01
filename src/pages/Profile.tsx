@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, User, Settings, Lock, ImageIcon, LogOut, Loader2 } from "lucide-react";
+import { ArrowLeft, User, Settings, Lock, ImageIcon, LogOut, Loader2, Link2, Check } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,19 @@ export default function Profile() {
   const [selectedAvatar, setSelectedAvatar] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState("profile");
+  const [linkCopied, setLinkCopied] = useState(false);
+
+  const handleCopyProfileLink = async () => {
+    const profileUrl = `${window.location.origin}/profile`;
+    try {
+      await navigator.clipboard.writeText(profileUrl);
+      setLinkCopied(true);
+      toast.success("Link Copied!", { duration: 2000 });
+      setTimeout(() => setLinkCopied(false), 2000);
+    } catch {
+      toast.error("Failed to copy link");
+    }
+  };
 
   useEffect(() => {
     if (!user) {
@@ -119,7 +132,7 @@ export default function Profile() {
           animate={{ opacity: 1, y: 0 }}
           className="flex flex-col items-center mb-6"
         >
-          <Avatar className="w-20 h-20 border-4 border-primary">
+          <Avatar className="w-24 h-24 border-4 border-primary shadow-lg">
             {selectedAvatar ? (
               <AvatarImage src={selectedAvatar} alt={username} />
             ) : null}
@@ -129,6 +142,33 @@ export default function Profile() {
           </Avatar>
           <p className="mt-3 text-lg font-semibold text-foreground">{username}</p>
           <p className="text-sm text-muted-foreground">{user?.email}</p>
+          
+          {/* Copy Profile Link Button */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.1 }}
+            className="mt-4"
+          >
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCopyProfileLink}
+              className="gap-2 transition-all duration-200"
+            >
+              <motion.div
+                animate={{ scale: linkCopied ? [1, 1.2, 1] : 1 }}
+                transition={{ duration: 0.2 }}
+              >
+                {linkCopied ? (
+                  <Check className="w-4 h-4 text-primary" />
+                ) : (
+                  <Link2 className="w-4 h-4" />
+                )}
+              </motion.div>
+              {linkCopied ? "Link Copied!" : "Copy Profile Link"}
+            </Button>
+          </motion.div>
         </motion.div>
 
         {/* Tabs */}
