@@ -1,43 +1,59 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
+interface AuthState {
+  user: User | null;
+  session: Session | null;
+  loading: boolean;
+  initializing: boolean;
+}
+
 export function useAuth() {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [initializing, setInitializing] = useState(true);
+  const [state, setState] = useState<AuthState>({
+    user: null,
+    session: null,
+    loading: true,
+    initializing: true,
+  });
 
   useEffect(() => {
     // Set up auth state listener FIRST
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-      setInitializing(false);
+      setState({
+        user: session?.user ?? null,
+        session,
+        loading: false,
+        initializing: false,
+      });
     });
 
     // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session }, error }) => {
       if (error) {
         console.error("Session error:", error);
-        // Clear any stale session data on error
-        setSession(null);
-        setUser(null);
+        setState({
+          user: null,
+          session: null,
+          loading: false,
+          initializing: false,
+        });
       } else {
-        setSession(session);
-        setUser(session?.user ?? null);
+        setState({
+          user: session?.user ?? null,
+          session,
+          loading: false,
+          initializing: false,
+        });
       }
-      setLoading(false);
-      setInitializing(false);
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  const signUp = async (email: string, password: string, username: string) => {
+  const signUp = useCallback(async (email: string, password: string, username: string) => {
     const redirectUrl = `${window.location.origin}/`;
     const { error } = await supabase.auth.signUp({
       email,
@@ -48,26 +64,26 @@ export function useAuth() {
       },
     });
     return { error };
-  };
+  }, []);
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = useCallback(async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
     return { error };
-  };
+  }, []);
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     const { error } = await supabase.auth.signOut();
     return { error };
-  };
+  }, []);
 
   return {
-    user,
-    session,
-    loading,
-    initializing,
+    user: state.user,
+    session: state.session,
+    loading: state.loading,
+    initializing: state.initializing,
     signUp,
     signIn,
     signOut,
