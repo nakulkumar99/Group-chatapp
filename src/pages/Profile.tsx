@@ -18,7 +18,7 @@ import { ChangePasswordForm } from "@/components/profile/ChangePasswordForm";
 
 export default function Profile() {
   const navigate = useNavigate();
-  const { user, signOut } = useAuth();
+  const { user, signOut, initializing } = useAuth();
   const { profile, loading: profileLoading, updateProfile } = useProfile();
   const [username, setUsername] = useState("");
   const [bio, setBio] = useState("");
@@ -40,11 +40,11 @@ export default function Profile() {
   };
 
   useEffect(() => {
-    if (!user) {
+    // Wait for auth to fully initialize before redirecting
+    if (!initializing && !user) {
       navigate("/auth");
-      return;
     }
-  }, [user, navigate]);
+  }, [user, initializing, navigate]);
 
   useEffect(() => {
     if (profile) {
@@ -97,7 +97,8 @@ export default function Profile() {
       .slice(0, 2);
   };
 
-  if (profileLoading) {
+  // Show loader while auth is initializing or profile is loading
+  if (initializing || profileLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />

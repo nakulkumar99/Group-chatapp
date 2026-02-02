@@ -90,7 +90,7 @@ export function ProfileImagesGallery({ onSelectAsAvatar }: ProfileImagesGalleryP
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/jpeg,image/png,image/gif,image/webp"
+        accept="image/jpeg,image/png,image/gif"
         multiple
         onChange={handleFileSelect}
         className="hidden"

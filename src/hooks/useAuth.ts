@@ -6,6 +6,7 @@ export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [initializing, setInitializing] = useState(true);
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -15,13 +16,22 @@ export function useAuth() {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+      setInitializing(false);
     });
 
     // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) {
+        console.error("Session error:", error);
+        // Clear any stale session data on error
+        setSession(null);
+        setUser(null);
+      } else {
+        setSession(session);
+        setUser(session?.user ?? null);
+      }
       setLoading(false);
+      setInitializing(false);
     });
 
     return () => subscription.unsubscribe();
@@ -57,6 +67,7 @@ export function useAuth() {
     user,
     session,
     loading,
+    initializing,
     signUp,
     signIn,
     signOut,
