@@ -42,8 +42,15 @@ export function useAdminRole() {
         .maybeSingle();
 
       if (error) {
-        console.error("Error checking admin role:", error);
-        setState((prev) => ({ ...prev, loading: false }));
+        // RLS may block access if user has no admin role - this is expected
+        console.log("Admin role check:", error.code === "PGRST116" ? "No admin role" : error.message);
+        setState({
+          isAdmin: false,
+          isSuperAdmin: false,
+          isModerator: false,
+          role: null,
+          loading: false,
+        });
         return;
       }
 
