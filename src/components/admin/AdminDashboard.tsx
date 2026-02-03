@@ -4,7 +4,6 @@ import { Users, MessageSquare, Users2, AlertTriangle, UserPlus, Activity } from 
 import { supabase } from "@/integrations/supabase/client";
 import { useContentReports } from "@/hooks/useContentReports";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
 
 interface DashboardStats {
   totalUsers: number;
@@ -135,3 +134,6 @@ export function AdminDashboard() {
   );
 }
 
+function cn(...classes: (string | undefined)[]) {
+  return classes.filter(Boolean).join(" ");
+}
