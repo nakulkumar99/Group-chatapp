@@ -1,7 +1,7 @@
 import { Navigate } from "react-router-dom";
 import { useAdminRole } from "@/hooks/useAdminRole";
 import { useAuth } from "@/hooks/useAuth";
-import { AdminDashboard } from "@/components/admin/AdminDashboard";
+import { ProfileAdminDashboard } from "@/components/admin/ProfileAdminDashboard";
 import { Loader2 } from "lucide-react";
 import { useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -41,8 +41,8 @@ export default function Admin() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <AdminDashboard />
+    <div className="min-h-screen bg-background">
+      <ProfileAdminDashboard />
     </div>
   );
 }

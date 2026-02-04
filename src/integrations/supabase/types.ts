@@ -273,6 +273,33 @@ export type Database = {
           },
         ]
       }
+      otp_verifications: {
+        Row: {
+          created_at: string | null
+          expires_at: string
+          id: string
+          otp_code: string
+          phone_number: string
+          verified: boolean | null
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at: string
+          id?: string
+          otp_code: string
+          phone_number: string
+          verified?: boolean | null
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          otp_code?: string
+          phone_number?: string
+          verified?: boolean | null
+        }
+        Relationships: []
+      }
       pinned_messages: {
         Row: {
           group_id: string
@@ -339,6 +366,10 @@ export type Database = {
           bio: string | null
           created_at: string
           id: string
+          phone_number: string | null
+          phone_verified: boolean | null
+          phone_verified_at: string | null
+          status: Database["public"]["Enums"]["user_status"] | null
           updated_at: string
           user_id: string
           username: string
@@ -348,6 +379,10 @@ export type Database = {
           bio?: string | null
           created_at?: string
           id?: string
+          phone_number?: string | null
+          phone_verified?: boolean | null
+          phone_verified_at?: string | null
+          status?: Database["public"]["Enums"]["user_status"] | null
           updated_at?: string
           user_id: string
           username: string
@@ -357,6 +392,10 @@ export type Database = {
           bio?: string | null
           created_at?: string
           id?: string
+          phone_number?: string | null
+          phone_verified?: boolean | null
+          phone_verified_at?: string | null
+          status?: Database["public"]["Enums"]["user_status"] | null
           updated_at?: string
           user_id?: string
           username?: string
@@ -453,6 +492,7 @@ export type Database = {
       app_role: "admin" | "moderator" | "member"
       global_admin_role: "super_admin" | "admin" | "moderator"
       report_status: "pending" | "reviewed" | "dismissed"
+      user_status: "active" | "inactive" | "suspended"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -583,6 +623,7 @@ export const Constants = {
       app_role: ["admin", "moderator", "member"],
       global_admin_role: ["super_admin", "admin", "moderator"],
       report_status: ["pending", "reviewed", "dismissed"],
+      user_status: ["active", "inactive", "suspended"],
     },
   },
 } as const
