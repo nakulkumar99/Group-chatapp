@@ -4,15 +4,13 @@ import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard,
   Users,
-  ClipboardList,
   Menu,
   X,
 } from "lucide-react";
 import { AdminDashboard } from "./AdminDashboard";
 import { UserManagement } from "./UserManagement";
-import { AuditLogs } from "./AuditLogs";
 
-type Tab = "dashboard" | "users" | "logs";
+type Tab = "dashboard" | "users";
 
 interface NavItemProps {
   icon: React.ReactNode;
@@ -45,7 +43,6 @@ export function ProfileAdminDashboard() {
   const navItems = [
     { id: "dashboard" as Tab, icon: <LayoutDashboard className="h-5 w-5" />, label: "Dashboard" },
     { id: "users" as Tab, icon: <Users className="h-5 w-5" />, label: "Users" },
-    { id: "logs" as Tab, icon: <ClipboardList className="h-5 w-5" />, label: "Activity Logs" },
   ];
 
   const renderContent = () => {
@@ -54,8 +51,6 @@ export function ProfileAdminDashboard() {
         return <AdminDashboard />;
       case "users":
         return <UserManagement />;
-      case "logs":
-        return <AuditLogs />;
       default:
         return <AdminDashboard />;
     }
