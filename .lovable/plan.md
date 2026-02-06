@@ -1,184 +1,190 @@
 
-# Chat Application Role Control System
+# Delete My Message & Scroll to Bottom Button Implementation
 
 ## Overview
 
-This plan implements a comprehensive per-group role control system with Admin, Moderator, and Member roles, restricting message sending and member management to Admins only.
-
-## Current State Analysis
-
-The codebase already has:
-- A `user_roles` table with `app_role` enum (`admin`, `moderator`, `member`)
-- `useGroupRole` hook for fetching and managing roles
-- Basic permission checks via `canSendMessages` and `canAddMembers`
-- `AdminSettingsPanel` component for role management
-
-## What Needs to Change
-
-### 1. Update Permission Logic
-
-**Current:** `canSendMessages` allows everyone unless `only_admins_can_send` setting is enabled
-**Required:** Admins ONLY can send messages (no toggle needed)
-
-### 2. Create Edge Function for Role Updates
-
-Create `update-member-role` edge function with server-side permission validation.
-
-### 3. Update UI Components
-
-Add role badges, three-dot menus, and confirmation modals to the MembersPanel.
+This plan implements two features:
+1. **Delete Message** - "Delete for me" or "Delete for everyone" (within 5 min) with "Message deleted" placeholder
+2. **Scroll to Bottom Button** - Shows when scrolled up with unread count badge and smooth scroll
 
 ---
 
-## Implementation Details
+## Feature 1: Delete My Message
 
 ### Database Changes
 
-No schema changes required - the `user_roles` table and `app_role` enum already exist with the correct values (`admin`, `moderator`, `member`).
+Add two new columns to the `messages` table:
 
-### File: `supabase/functions/update-member-role/index.ts` (NEW)
-
-Create edge function to handle role updates with server-side validation:
-
-```text
-Endpoint: PUT /update-member-role
-Body: { groupId, targetUserId, newRole }
-Validation:
-  1. Authenticate user via JWT
-  2. Check if user is admin in the group
-  3. Return 403 if not authorized
-  4. Update/insert role and return success
+```sql
+-- Add deletion columns to messages table
+ALTER TABLE public.messages 
+ADD COLUMN deleted_at timestamp with time zone DEFAULT NULL,
+ADD COLUMN deleted_for_everyone boolean DEFAULT false;
 ```
 
-### File: `src/hooks/useGroupRole.ts` (MODIFY)
+Update RLS policy to allow users to update their own messages for deletion:
 
-Update permission logic:
+```sql
+-- The existing UPDATE policy already allows: auth.uid() = user_id
+-- No additional policy needed
+```
+
+### File: `src/hooks/useMessages.ts` (MODIFY)
+
+Add delete functionality:
 
 ```text
+New functions:
+- deleteForMe(messageId): Sets deleted_at for local filtering only
+- deleteForEveryone(messageId): Sets deleted_at and deleted_for_everyone=true
+  - Only allowed within 5 minutes of message creation
+
 Changes:
-- Line 202: Change canSendMessages = isAdmin (remove toggle dependency)
-- Line 203: Change canAddMembers = isAdmin (remove toggle dependency)
-- Add confirmRoleChange function that calls the edge function
+- Update fetchMessages to filter out messages deleted_for_me by current user
+- Add realtime listener for UPDATE events to handle deletions
+- Local state: Track user's deleted message IDs for "delete for me"
 ```
 
-### File: `src/components/layout/MembersPanel.tsx` (MODIFY)
+### File: `src/components/MessageBubble.tsx` (MODIFY)
 
-Add role management UI:
+Add delete UI and "Message deleted" placeholder:
 
 ```text
 New imports:
-- MoreVertical, Settings (icons)
+- Trash2 icon
 - DropdownMenu components
-- AlertDialog components
-- toast from sonner
+- AlertDialog for confirmation
 
-New state:
-- showRoleModal: boolean
-- pendingRoleChange: { userId, newRole } | null
+New props:
+- onDelete: (messageId: string, forEveryone: boolean) => void
+- isDeleted: boolean
+- deletedForEveryone: boolean
 
-New UI elements:
-1. Role badges next to usernames:
-   - Admin: 👑 crown icon (already exists)
-   - Moderator: 🛡️ shield icon (already exists)  
-   - Member: 👤 user icon (new)
-
-2. Three-dot menu (visible to Admins only):
-   - "Make Admin"
-   - "Make Moderator"  
-   - "Make Member"
-
-3. Admin settings icon in header (visible to Admins only)
-
-4. Confirmation AlertDialog:
-   - Title: "Change Role"
-   - Description: "Change [Username] to [Role]?"
-   - Buttons: Cancel / Confirm
+UI Changes:
+1. Add Trash icon in action buttons (visible for own messages)
+2. Show dropdown menu on click:
+   - "Delete for me" (always available)
+   - "Delete for everyone" (only if within 5 min)
+3. Show "Message deleted" placeholder for deleted messages:
+   - Gray italicized text: "🚫 This message was deleted"
+   - No reactions, no actions, minimal styling
 ```
 
 ### File: `src/components/layout/ChatArea.tsx` (MODIFY)
 
-Update to use new permission logic:
-
-```text
-Line 80: Already uses canSendMessages from useGroupRole
-Line 376-383: Already shows/hides ChatInput based on canSendMessages
-
-Changes:
-- Update the disabled message to: "Only admins can send messages"
-- Add toast error when blocked actions are attempted
-```
-
-### File: `src/components/CreateGroupModal.tsx` (MODIFY)
-
-No changes needed - the component is only shown to users who can create groups, and group creators automatically become admins.
-
-### File: `src/components/layout/ContactsSidebar.tsx` (MODIFY)
-
-Hide "Join Group" functionality for non-admins when `only_admins_can_add_members` is enabled:
+Pass delete handler to MessageBubble:
 
 ```text
 Changes:
-- Add admin icon link to /admin for global admins
-- Keep create group visible (creators become admins)
+- Get deleteMessage function from useMessages
+- Pass onDelete prop to MessageBubble
+- Handle deleted message display logic
 ```
 
 ---
 
-## Component Architecture
+## Feature 2: Scroll to Bottom Button
+
+### File: `src/components/layout/ChatArea.tsx` (MODIFY)
+
+Add scroll detection and button:
 
 ```text
-MembersPanel
-├── Header
-│   ├── Members count
-│   └── Admin Settings icon (Admin only)
-├── Member List
-│   └── Member Item
-│       ├── Avatar with online indicator
-│       ├── Username
-│       ├── Role Badge (👑/🛡️/👤)
-│       └── Three-dot menu (Admin only)
-│           ├── Make Admin
-│           ├── Make Moderator
-│           └── Make Member
-└── Role Change Confirmation Modal
+New state:
+- showScrollButton: boolean
+- unreadBelowCount: number
+- scrollAreaRef: ref to access ScrollArea viewport
+
+New imports:
+- ArrowDown icon
+
+New logic:
+1. Track scroll position using onScroll event
+2. If scrolled up > 200px from bottom, show button
+3. Count new messages that arrived while scrolled up
+4. Reset unread count when scrolling to bottom
+
+New UI:
+- Floating button at bottom-right of messages area
+- Badge showing unread count (if > 0)
+- Smooth scroll animation on click
+```
+
+### Component: Scroll to Bottom Button
+
+```text
+Position: fixed bottom-20 right-4 (above chat input)
+Style:
+  - Circular button with ArrowDown icon
+  - Primary background
+  - Badge in top-right corner for unread count
+  - Animate in/out with framer-motion
+
+Behavior:
+  - onClick: scrollTo bottom with smooth behavior
+  - Badge shows count of messages received while scrolled up
 ```
 
 ---
 
-## Permission Matrix
+## Implementation Flow
 
-| Action | Admin | Moderator | Member |
-|--------|-------|-----------|--------|
-| Send messages | Yes | No | No |
-| Add members | Yes | No | No |
-| Change roles | Yes | No | No |
-| View messages | Yes | Yes | Yes |
-| View members | Yes | Yes | Yes |
-| Leave group | Yes | Yes | Yes |
-
----
-
-## API Endpoint Flow
+### Delete Message Flow
 
 ```text
-Client                    Edge Function                  Database
-  │                            │                            │
-  ├──PUT /update-member-role──►│                            │
-  │   {groupId, userId, role}  │                            │
-  │                            │                            │
-  │                            ├──Verify JWT────────────────►
-  │                            │                            │
-  │                            ├──Check admin role──────────►
-  │                            │                            │
-  │                       ◄────┤   Return user role         │
-  │                            │                            │
-  │   (if not admin)           │                            │
-  │◄─────403 Forbidden─────────┤                            │
-  │                            │                            │
-  │   (if admin)               │                            │
-  │                            ├──Upsert role───────────────►
-  │                            │                            │
-  │◄─────200 Success───────────┤                            │
+User clicks trash icon
+        │
+        ▼
+   Show dropdown
+   ┌─────────────────────────┐
+   │ Delete for me           │
+   │ Delete for everyone     │ ← Only if < 5 min old
+   └─────────────────────────┘
+        │
+        ▼
+   Confirmation modal
+   "Delete this message?"
+        │
+        ▼
+  ┌─────┴─────┐
+  │           │
+  ▼           ▼
+For Me     For Everyone
+  │           │
+  ▼           ▼
+Local      Database
+state      update
+only       + realtime
+           broadcast
+```
+
+### Scroll Button Flow
+
+```text
+User scrolls up
+        │
+        ▼
+  Distance > 200px?
+        │
+    ┌───┴───┐
+    │       │
+    No     Yes
+    │       │
+    ▼       ▼
+  Hide    Show
+button   button
+           │
+           ▼
+    New message arrives
+           │
+           ▼
+    Increment badge
+           │
+           ▼
+    User clicks button
+           │
+           ▼
+    Smooth scroll + reset badge
 ```
 
 ---
@@ -187,28 +193,61 @@ Client                    Edge Function                  Database
 
 | File | Action | Description |
 |------|--------|-------------|
-| `supabase/functions/update-member-role/index.ts` | CREATE | Edge function for role updates |
-| `src/hooks/useGroupRole.ts` | MODIFY | Update permission logic, add API call |
-| `src/components/layout/MembersPanel.tsx` | MODIFY | Add role UI, menus, modals |
-| `src/components/layout/ChatArea.tsx` | MODIFY | Add toast for blocked actions |
-| `src/components/layout/ContactsSidebar.tsx` | MODIFY | Add admin icon link |
+| `supabase/migrations/...` | CREATE | Add deleted_at, deleted_for_everyone columns |
+| `src/hooks/useMessages.ts` | MODIFY | Add delete functions, filter deleted messages |
+| `src/components/MessageBubble.tsx` | MODIFY | Add delete UI, show deleted placeholder |
+| `src/components/layout/ChatArea.tsx` | MODIFY | Add scroll button, pass delete handler |
 
 ---
 
-## Error Handling
+## UI Preview
 
-- Server returns 403: Show toast "Only admins can perform this action"
-- Network error: Show toast "Failed to update role. Please try again."
-- Success: Show toast "Role updated to [role]"
+### Deleted Message Placeholder
+```text
+┌─────────────────────────────────────────┐
+│ 🚫 This message was deleted             │
+│                              12:34 PM   │
+└─────────────────────────────────────────┘
+```
+
+### Scroll to Bottom Button
+```text
+                    ┌───┐
+                    │ 3 │ ← Unread badge
+              ┌─────┴───┴─────┐
+              │       ↓       │
+              │   (Arrow)     │
+              └───────────────┘
+```
+
+### Delete Dropdown Menu
+```text
+┌─────────────────────────┐
+│ 🗑️ Delete for me        │
+├─────────────────────────┤
+│ 🗑️ Delete for everyone  │ ← Red text, only if < 5 min
+└─────────────────────────┘
+```
 
 ---
 
-## Testing Checklist
+## Time Check Logic (5 min rule)
 
-1. Admin can see three-dot menu on all members
-2. Non-admins cannot see three-dot menu
-3. Role change shows confirmation modal
-4. Role change updates badge immediately
-5. Non-admins see disabled message input
-6. Non-admins get toast when attempting restricted actions
-7. Edge function returns 403 for unauthorized requests
+```typescript
+const canDeleteForEveryone = (createdAt: string): boolean => {
+  const fiveMinutesMs = 5 * 60 * 1000;
+  const messageTime = new Date(createdAt).getTime();
+  const now = Date.now();
+  return now - messageTime <= fiveMinutesMs;
+};
+```
+
+---
+
+## Edge Cases Handled
+
+1. **Delete for everyone after 5 min**: Button disabled/hidden
+2. **Deleted message reactions**: Hidden along with message
+3. **Scroll button position**: Above chat input, responsive
+4. **Realtime deletion**: Other users see "Message deleted" instantly
+5. **Delete for me**: Only affects local user, others still see message
