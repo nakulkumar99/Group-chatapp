@@ -98,10 +98,13 @@ export function MessageBubble({
   const [editContent, setEditContent] = useState(message.content);
   const [showActions, setShowActions] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [deleteType, setDeleteType] = useState<"me" | "everyone">("me");
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   // Check if message is deleted for everyone
   const isDeletedForEveryone = message.deleted_at && message.deleted_for_everyone;
+
+  // Keep actions visible when dropdown is open
+  const actionsVisible = showActions || dropdownOpen;
 
   const getInitials = (name: string) => {
     return name
@@ -157,17 +160,18 @@ export function MessageBubble({
     setIsEditing(false);
   };
 
-  const handleDeleteClick = (type: "me" | "everyone") => {
-    setDeleteType(type);
+  const handleDeleteForMe = () => {
+    // Instant delete for me - no confirmation needed (WhatsApp-like)
+    onDeleteForMe?.(message.id);
+  };
+
+  const handleDeleteForEveryoneClick = () => {
+    // Show confirmation only for "delete for everyone"
     setShowDeleteDialog(true);
   };
 
   const handleDeleteConfirm = () => {
-    if (deleteType === "me") {
-      onDeleteForMe?.(message.id);
-    } else {
-      onDeleteForEveryone?.(message.id);
-    }
+    onDeleteForEveryone?.(message.id);
     setShowDeleteDialog(false);
   };
 
@@ -342,13 +346,13 @@ export function MessageBubble({
               {message.profile?.username || "Unknown"}
             </p>
           )}
-          <div className="relative">
+          <div className="relative group">
             {/* Action buttons */}
-            {showActions && !isEditing && (
+            {actionsVisible && !isEditing && (
               <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className={`absolute top-0 flex items-center gap-1 z-10 ${
+                className={`absolute top-0 flex items-center gap-1 z-20 ${
                   isOwn ? "-left-28" : "-right-28"
                 }`}
               >
@@ -377,30 +381,44 @@ export function MessageBubble({
                 )}
                 {/* Delete button for own messages */}
                 {isOwn && (onDeleteForMe || onDeleteForEveryone) && (
-                  <DropdownMenu>
+                  <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
                     <DropdownMenuTrigger asChild>
                       <Button
                         size="icon"
                         variant="ghost"
-                        className="h-7 w-7 rounded-full hover:bg-accent"
+                        className="h-7 w-7 rounded-full hover:bg-accent hover:text-destructive"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuContent align="end" className="w-52" sideOffset={5}>
                       {onDeleteForMe && (
-                        <DropdownMenuItem onClick={() => handleDeleteClick("me")}>
+                        <DropdownMenuItem 
+                          onClick={() => {
+                            setDropdownOpen(false);
+                            handleDeleteForMe();
+                          }}
+                          className="cursor-pointer"
+                        >
                           <Trash2 className="w-4 h-4 mr-2" />
                           Delete for me
                         </DropdownMenuItem>
                       )}
                       {onDeleteForEveryone && canDeleteForEveryone?.(message.created_at) && (
                         <DropdownMenuItem
-                          onClick={() => handleDeleteClick("everyone")}
-                          className="text-destructive focus:text-destructive"
+                          onClick={() => {
+                            setDropdownOpen(false);
+                            handleDeleteForEveryoneClick();
+                          }}
+                          className="text-destructive focus:text-destructive cursor-pointer"
                         >
                           <Trash2 className="w-4 h-4 mr-2" />
                           Delete for everyone
+                        </DropdownMenuItem>
+                      )}
+                      {onDeleteForEveryone && !canDeleteForEveryone?.(message.created_at) && (
+                        <DropdownMenuItem disabled className="text-muted-foreground text-xs">
+                          Delete for everyone expired (5 min limit)
                         </DropdownMenuItem>
                       )}
                     </DropdownMenuContent>
@@ -485,15 +503,13 @@ export function MessageBubble({
         </div>
       </motion.div>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete for Everyone Confirmation Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Message</AlertDialogTitle>
+            <AlertDialogTitle>Delete for everyone?</AlertDialogTitle>
             <AlertDialogDescription>
-              {deleteType === "me"
-                ? "This will delete the message for you only. Others will still see it."
-                : "This will delete the message for everyone in the chat."}
+              This message will be deleted for all members in this chat. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -502,7 +518,7 @@ export function MessageBubble({
               onClick={handleDeleteConfirm}
               className="bg-destructive hover:bg-destructive/90"
             >
-              Delete
+              Delete for everyone
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
