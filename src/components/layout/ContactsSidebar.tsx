@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Plus, Settings, Menu, X, MessageCircle, LogOut, User } from "lucide-react";
+import { Search, Plus, Settings, Menu, X, MessageCircle, LogOut, User, ShieldCheck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useAdminRole } from "@/hooks/useAdminRole";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -33,6 +34,7 @@ export function ContactsSidebar({
   const navigate = useNavigate();
   const { profile } = useProfile();
   const { groups, myGroups, loading, createGroup, joinGroup, leaveGroup } = useGroups();
+  const { isAdmin: isGlobalAdmin } = useAdminRole();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -110,6 +112,17 @@ export function ContactsSidebar({
             >
               <User className="w-4 h-4" />
             </Button>
+            {isGlobalAdmin && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate("/admin")}
+                className="hover:bg-accent rounded-full h-8 w-8 text-primary"
+                title="Admin Panel"
+              >
+                <ShieldCheck className="w-4 h-4" />
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="icon"
