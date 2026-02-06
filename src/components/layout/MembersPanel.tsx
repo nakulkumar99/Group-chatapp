@@ -1,11 +1,30 @@
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Users, X, Crown, ShieldCheck, Shield } from "lucide-react";
+import { Users, X, Crown, ShieldCheck, Shield, User, MoreVertical, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useGroupMembers } from "@/hooks/useGroupMembers";
 import { usePresence } from "@/hooks/usePresence";
 import { useGroupRole } from "@/hooks/useGroupRole";
+import { AdminSettingsPanel } from "@/components/AdminSettingsPanel";
+import { useAuth } from "@/hooks/useAuth";
 
 interface MembersPanelProps {
   groupId: string | null;
@@ -16,6 +35,8 @@ interface MembersPanelProps {
   isMobile: boolean;
 }
 
+type AppRole = "admin" | "moderator" | "member";
+
 export function MembersPanel({
   groupId,
   isOpen,
@@ -24,9 +45,18 @@ export function MembersPanel({
   currentUserId,
   isMobile,
 }: MembersPanelProps) {
+  const { user } = useAuth();
   const { members, loading } = useGroupMembers(groupId);
   const { onlineCount, isUserOnline, isUserTyping } = usePresence(groupId);
-  const { groupRoles } = useGroupRole(groupId);
+  const { groupRoles, isAdmin, isCreator, updateRoleViaAPI } = useGroupRole(groupId);
+
+  const [showAdminSettings, setShowAdminSettings] = useState(false);
+  const [pendingRoleChange, setPendingRoleChange] = useState<{
+    userId: string;
+    username: string;
+    newRole: AppRole;
+  } | null>(null);
+  const [isUpdatingRole, setIsUpdatingRole] = useState(false);
 
   const getInitials = (name: string) => {
     return name
@@ -37,32 +67,47 @@ export function MembersPanel({
       .slice(0, 2);
   };
 
+  const getMemberRole = (userId: string): AppRole | null => {
+    if (userId === creatorId) return "admin"; // Creator is always admin
+    const role = groupRoles.find((r) => r.user_id === userId);
+    return role?.role || null;
+  };
+
   const getMemberRoleIcon = (userId: string) => {
     if (userId === creatorId) {
       return <Crown className="w-3.5 h-3.5 text-amber-500" />;
     }
-    const role = groupRoles.find((r) => r.user_id === userId);
-    if (role?.role === "admin") {
+    const role = getMemberRole(userId);
+    if (role === "admin") {
       return <ShieldCheck className="w-3.5 h-3.5 text-primary" />;
     }
-    if (role?.role === "moderator") {
+    if (role === "moderator") {
       return <Shield className="w-3.5 h-3.5 text-sky-500" />;
     }
-    return null;
+    return <User className="w-3.5 h-3.5 text-muted-foreground" />;
   };
 
-  const getMemberRoleLabel = (userId: string) => {
+  const getMemberRoleLabel = (userId: string): string => {
     if (userId === creatorId) {
       return "Owner";
     }
-    const role = groupRoles.find((r) => r.user_id === userId);
-    if (role?.role === "admin") {
-      return "Admin";
-    }
-    if (role?.role === "moderator") {
-      return "Moderator";
-    }
-    return null;
+    const role = getMemberRole(userId);
+    if (role === "admin") return "Admin";
+    if (role === "moderator") return "Moderator";
+    return "Member";
+  };
+
+  const handleRoleChangeClick = (userId: string, username: string, newRole: AppRole) => {
+    setPendingRoleChange({ userId, username, newRole });
+  };
+
+  const confirmRoleChange = async () => {
+    if (!pendingRoleChange) return;
+
+    setIsUpdatingRole(true);
+    await updateRoleViaAPI(pendingRoleChange.userId, pendingRoleChange.newRole);
+    setIsUpdatingRole(false);
+    setPendingRoleChange(null);
   };
 
   const panelContent = (
@@ -73,15 +118,43 @@ export function MembersPanel({
           <Users className="w-5 h-5 text-primary" />
           <h2 className="font-semibold text-foreground">Members ({members.length})</h2>
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onClose}
-          className="hover:bg-accent rounded-full"
-        >
-          <X className="w-5 h-5" />
-        </Button>
+        <div className="flex items-center gap-1">
+          {isAdmin && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowAdminSettings(!showAdminSettings)}
+              className={`hover:bg-accent rounded-full ${showAdminSettings ? "bg-accent" : ""}`}
+            >
+              <Settings className="w-5 h-5" />
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onClose}
+            className="hover:bg-accent rounded-full"
+          >
+            <X className="w-5 h-5" />
+          </Button>
+        </div>
       </div>
+
+      {/* Admin Settings Panel */}
+      <AnimatePresence>
+        {showAdminSettings && isAdmin && groupId && user && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="border-b border-border overflow-hidden"
+          >
+            <div className="p-4">
+              <AdminSettingsPanel groupId={groupId} currentUserId={user.id} />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Online Count */}
       <div className="px-4 py-2 border-b border-border bg-accent/30">
@@ -104,13 +177,16 @@ export function MembersPanel({
               const memberIsTyping = isUserTyping(member.user_id);
               const roleIcon = getMemberRoleIcon(member.user_id);
               const roleLabel = getMemberRoleLabel(member.user_id);
+              const isOwner = member.user_id === creatorId;
+              const isSelf = member.user_id === currentUserId;
+              const canModifyRole = isAdmin && !isOwner && !isSelf;
 
               return (
                 <motion.div
                   key={member.id}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="flex items-center gap-3 p-3 rounded-xl hover:bg-accent/50 transition-colors"
+                  className="flex items-center gap-3 p-3 rounded-xl hover:bg-accent/50 transition-colors group"
                 >
                   <div className="relative">
                     <Avatar className="w-10 h-10">
@@ -134,22 +210,90 @@ export function MembersPanel({
                     </div>
                     {memberIsTyping ? (
                       <span className="text-xs text-primary animate-pulse">typing...</span>
-                    ) : roleLabel ? (
-                      <span className="text-xs text-primary">{roleLabel}</span>
-                    ) : member.user_id === currentUserId ? (
-                      <span className="text-xs text-muted-foreground">You</span>
-                    ) : memberIsOnline ? (
-                      <span className="text-xs text-online">Online</span>
                     ) : (
-                      <span className="text-xs text-muted-foreground">Offline</span>
+                      <span className="text-xs text-primary">{roleLabel}</span>
                     )}
                   </div>
+
+                  {/* Three-dot menu for role management (Admin only) */}
+                  {canModifyRole && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <MoreVertical className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuItem
+                          onClick={() =>
+                            handleRoleChangeClick(
+                              member.user_id,
+                              member.profile?.username || "Unknown",
+                              "admin"
+                            )
+                          }
+                        >
+                          <Crown className="w-4 h-4 mr-2 text-amber-500" />
+                          Make Admin
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() =>
+                            handleRoleChangeClick(
+                              member.user_id,
+                              member.profile?.username || "Unknown",
+                              "moderator"
+                            )
+                          }
+                        >
+                          <Shield className="w-4 h-4 mr-2 text-sky-500" />
+                          Make Moderator
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() =>
+                            handleRoleChangeClick(
+                              member.user_id,
+                              member.profile?.username || "Unknown",
+                              "member"
+                            )
+                          }
+                        >
+                          <User className="w-4 h-4 mr-2 text-muted-foreground" />
+                          Make Member
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
                 </motion.div>
               );
             })}
           </div>
         )}
       </ScrollArea>
+
+      {/* Role Change Confirmation Dialog */}
+      <AlertDialog
+        open={pendingRoleChange !== null}
+        onOpenChange={(open) => !open && setPendingRoleChange(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Change Role</AlertDialogTitle>
+            <AlertDialogDescription>
+              Change {pendingRoleChange?.username} to {pendingRoleChange?.newRole}?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isUpdatingRole}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmRoleChange} disabled={isUpdatingRole}>
+              {isUpdatingRole ? "Updating..." : "Confirm"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 

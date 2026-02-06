@@ -112,7 +112,7 @@ export function useGroupRole(groupId: string | null) {
 
   const setRole = async (targetUserId: string, role: AppRole) => {
     if (!groupId || !user || !isAdmin) {
-      toast.error("Permission denied");
+      toast.error("Only admins can perform this action");
       return { error: new Error("Permission denied") };
     }
 
@@ -154,9 +154,50 @@ export function useGroupRole(groupId: string | null) {
     return { error: null };
   };
 
+  // Server-side validated role update via edge function
+  const updateRoleViaAPI = async (targetUserId: string, newRole: AppRole) => {
+    if (!groupId || !user) {
+      toast.error("Only admins can perform this action");
+      return { error: new Error("Permission denied") };
+    }
+
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+
+      if (!token) {
+        toast.error("Authentication required");
+        return { error: new Error("No session") };
+      }
+
+      const { data, error } = await supabase.functions.invoke("update-member-role", {
+        body: { groupId, targetUserId, newRole },
+      });
+
+      if (error) {
+        console.error("Edge function error:", error);
+        toast.error(error.message || "Failed to update role");
+        return { error };
+      }
+
+      if (data?.error) {
+        toast.error(data.error);
+        return { error: new Error(data.error) };
+      }
+
+      await fetchRoleData();
+      toast.success(`Role updated to ${newRole}`);
+      return { error: null };
+    } catch (err) {
+      console.error("API error:", err);
+      toast.error("Failed to update role. Please try again.");
+      return { error: err as Error };
+    }
+  };
+
   const removeRole = async (targetUserId: string) => {
     if (!groupId || !user || !isAdmin) {
-      toast.error("Permission denied");
+      toast.error("Only admins can perform this action");
       return { error: new Error("Permission denied") };
     }
 
@@ -178,7 +219,7 @@ export function useGroupRole(groupId: string | null) {
 
   const updateSettings = async (settings: Partial<GroupSettings>) => {
     if (!groupId || !user || !isAdmin) {
-      toast.error("Permission denied");
+      toast.error("Only admins can perform this action");
       return { error: new Error("Permission denied") };
     }
 
@@ -199,8 +240,9 @@ export function useGroupRole(groupId: string | null) {
     return { error: null };
   };
 
-  const canSendMessages = isAdmin || !groupSettings.only_admins_can_send;
-  const canAddMembers = isAdmin || !groupSettings.only_admins_can_add_members;
+  // STRICT PERMISSION: Only admins can send messages and add members
+  const canSendMessages = isAdmin;
+  const canAddMembers = isAdmin;
 
   return {
     userRole,
@@ -210,6 +252,7 @@ export function useGroupRole(groupId: string | null) {
     groupSettings,
     loading,
     setRole,
+    updateRoleViaAPI,
     removeRole,
     updateSettings,
     canSendMessages,
