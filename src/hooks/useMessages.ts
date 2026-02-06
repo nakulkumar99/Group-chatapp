@@ -14,6 +14,8 @@ interface Message {
   file_type?: string | null;
   file_name?: string | null;
   edited_at?: string | null;
+  deleted_at?: string | null;
+  deleted_for_everyone?: boolean;
   profile?: {
     username: string;
     avatar_url: string | null;
@@ -24,6 +26,7 @@ export function useMessages(groupId: string | null) {
   const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deletedForMeIds, setDeletedForMeIds] = useState<Set<string>>(new Set());
   const channelRef = useRef<RealtimeChannel | null>(null);
 
   const fetchMessages = useCallback(async () => {
@@ -103,6 +106,25 @@ export function useMessages(groupId: string | null) {
           ]);
         }
       )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "messages",
+          filter: `group_id=eq.${groupId}`,
+        },
+        (payload) => {
+          const updatedMessage = payload.new as Message;
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === updatedMessage.id
+                ? { ...msg, ...updatedMessage }
+                : msg
+            )
+          );
+        }
+      )
       .subscribe();
 
     channelRef.current = channel;
@@ -163,11 +185,64 @@ export function useMessages(groupId: string | null) {
     );
   };
 
+  const deleteForMe = (messageId: string) => {
+    setDeletedForMeIds((prev) => new Set(prev).add(messageId));
+    toast.success("Message deleted for you");
+  };
+
+  const deleteForEveryone = async (messageId: string) => {
+    if (!user) return;
+
+    const message = messages.find((m) => m.id === messageId);
+    if (!message) return;
+
+    // Check 5-minute window
+    const fiveMinutesMs = 5 * 60 * 1000;
+    const messageTime = new Date(message.created_at).getTime();
+    const now = Date.now();
+
+    if (now - messageTime > fiveMinutesMs) {
+      toast.error("You can only delete for everyone within 5 minutes");
+      return;
+    }
+
+    const { error } = await supabase
+      .from("messages")
+      .update({
+        deleted_at: new Date().toISOString(),
+        deleted_for_everyone: true,
+      })
+      .eq("id", messageId)
+      .eq("user_id", user.id);
+
+    if (error) {
+      toast.error("Failed to delete message");
+      return;
+    }
+
+    toast.success("Message deleted for everyone");
+  };
+
+  const canDeleteForEveryone = (createdAt: string): boolean => {
+    const fiveMinutesMs = 5 * 60 * 1000;
+    const messageTime = new Date(createdAt).getTime();
+    const now = Date.now();
+    return now - messageTime <= fiveMinutesMs;
+  };
+
+  // Filter out messages deleted for current user
+  const visibleMessages = messages.filter(
+    (msg) => !deletedForMeIds.has(msg.id)
+  );
+
   return {
-    messages,
+    messages: visibleMessages,
     loading,
     sendMessage,
     editMessage,
+    deleteForMe,
+    deleteForEveryone,
+    canDeleteForEveryone,
     refetch: fetchMessages,
   };
 }
