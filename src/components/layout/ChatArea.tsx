@@ -1,4 +1,4 @@
-import { useEffect, useRef, useLayoutEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useLayoutEffect, useMemo, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Users,
@@ -44,6 +44,7 @@ import {
 import { MessageBubble } from "@/components/MessageBubble";
 import { ChatInput } from "@/components/ChatInput";
 import { PinnedMessagesBar } from "@/components/PinnedMessagesBar";
+import { ScrollToBottomButton } from "@/components/ScrollToBottomButton";
 import { useThemeContext } from "./ThemeProvider";
 import { toast } from "sonner";
 
@@ -74,7 +75,15 @@ export function ChatArea({
   const navigate = useNavigate();
   const { user } = useAuth();
   const { wallpaper, getWallpaperStyle } = useThemeContext();
-  const { messages, loading: messagesLoading, sendMessage, editMessage } = useMessages(groupId);
+  const { 
+    messages, 
+    loading: messagesLoading, 
+    sendMessage, 
+    editMessage,
+    deleteForMe,
+    deleteForEveryone,
+    canDeleteForEveryone,
+  } = useMessages(groupId);
   const { members } = useGroupMembers(groupId);
   const { typingUsers, onlineCount, startTyping } = usePresence(groupId);
   const { isAdmin, canSendMessages } = useGroupRole(groupId);
@@ -87,6 +96,10 @@ export function ChatArea({
   const [group, setGroup] = useState<GroupInfo | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const [showScrollButton, setShowScrollButton] = useState(false);
+  const [unreadBelowCount, setUnreadBelowCount] = useState(0);
+  const prevMessageCountRef = useRef(messages.length);
 
   const isOwner = group?.created_by === user?.id;
 
@@ -114,12 +127,39 @@ export function ChatArea({
     fetchGroup();
   }, [groupId]);
 
-  useLayoutEffect(() => {
+  // Handle scroll to bottom and track unread
+  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLDivElement;
+    const distanceFromBottom = target.scrollHeight - target.scrollTop - target.clientHeight;
+    setShowScrollButton(distanceFromBottom > 200);
+    
+    // If scrolled to bottom, reset unread count
+    if (distanceFromBottom < 50) {
+      setUnreadBelowCount(0);
+    }
+  }, []);
+
+  const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    setUnreadBelowCount(0);
+  }, []);
+
+  // Track new messages while scrolled up
+  useEffect(() => {
+    if (messages.length > prevMessageCountRef.current && showScrollButton) {
+      setUnreadBelowCount((prev) => prev + (messages.length - prevMessageCountRef.current));
+    }
+    prevMessageCountRef.current = messages.length;
+  }, [messages.length, showScrollButton]);
+
+  useLayoutEffect(() => {
+    if (!showScrollButton) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
     if (messages.length > 0) {
       markAllAsRead();
     }
-  }, [messages, markAllAsRead]);
+  }, [messages, markAllAsRead, showScrollButton]);
 
   const handleSendMessage = async (
     content: string,
@@ -321,7 +361,7 @@ export function ChatArea({
           />
         )}
 
-        <ScrollArea className="flex-1 p-4 relative z-10">
+        <ScrollArea className="flex-1 p-4 relative z-10" onScrollCapture={handleScroll}>
           {messagesLoading ? (
             <div className="flex items-center justify-center h-full">
               <div className="animate-pulse text-muted-foreground">Loading messages...</div>
@@ -359,6 +399,9 @@ export function ChatArea({
                       onEdit={editMessage}
                       onReact={toggleReaction}
                       onPin={handlePinMessage}
+                      onDeleteForMe={deleteForMe}
+                      onDeleteForEveryone={deleteForEveryone}
+                      canDeleteForEveryone={canDeleteForEveryone}
                       reactionGroups={getReactionGroups(message.id)}
                       isPinned={isMessagePinned(message.id)}
                       isAdmin={isAdmin}
@@ -370,6 +413,13 @@ export function ChatArea({
             </div>
           )}
         </ScrollArea>
+
+        {/* Scroll to Bottom Button */}
+        <ScrollToBottomButton
+          show={showScrollButton}
+          unreadCount={unreadBelowCount}
+          onClick={scrollToBottom}
+        />
 
         {/* Chat Input */}
         <div className="relative z-10 bg-card/80 backdrop-blur-sm border-t border-border">
