@@ -48,7 +48,7 @@ export function MembersPanel({
   const { user } = useAuth();
   const { members, loading } = useGroupMembers(groupId);
   const { onlineCount, isUserOnline, isUserTyping } = usePresence(groupId);
-  const { groupRoles, isAdmin, isCreator, updateRoleViaAPI } = useGroupRole(groupId);
+  const { groupRoles, isAdmin, updateRoleViaAPI } = useGroupRole(groupId);
 
   const [showAdminSettings, setShowAdminSettings] = useState(false);
   const [pendingRoleChange, setPendingRoleChange] = useState<{
@@ -140,9 +140,9 @@ export function MembersPanel({
         </div>
       </div>
 
-      {/* Admin Settings Panel */}
+      {/* Admin Settings Panel - Unified with 3 sections */}
       <AnimatePresence>
-        {showAdminSettings && isAdmin && groupId && user && (
+        {showAdminSettings && groupId && user && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
@@ -150,7 +150,12 @@ export function MembersPanel({
             className="border-b border-border overflow-hidden"
           >
             <div className="p-4">
-              <AdminSettingsPanel groupId={groupId} currentUserId={user.id} />
+              <AdminSettingsPanel
+                groupId={groupId}
+                currentUserId={user.id}
+                variant="full"
+                compact
+              />
             </div>
           </motion.div>
         )}
