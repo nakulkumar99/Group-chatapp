@@ -218,26 +218,44 @@ export function useGroupRole(groupId: string | null) {
   };
 
   const updateSettings = async (settings: Partial<GroupSettings>) => {
-    if (!groupId || !user || !isAdmin) {
+    if (!groupId || !user) {
       toast.error("Only admins can perform this action");
       return { error: new Error("Permission denied") };
     }
 
-    const newSettings = { ...groupSettings, ...settings };
+    try {
+      const { data, error } = await supabase.functions.invoke("update-group-settings", {
+        body: { groupId, settings },
+      });
 
-    const { error } = await supabase
-      .from("groups")
-      .update({ settings: newSettings })
-      .eq("id", groupId);
+      if (error) {
+        console.error("Edge function error:", error);
+        toast.error(error.message || "Failed to update settings");
+        return { error };
+      }
 
-    if (error) {
-      toast.error("Failed to update settings");
-      return { error };
+      if (data?.error) {
+        toast.error(data.error);
+        return { error: new Error(data.error) };
+      }
+
+      // Update local state with the returned settings
+      if (data?.settings) {
+        setGroupSettings({
+          only_admins_can_send: Boolean(data.settings.only_admins_can_send),
+          only_admins_can_add_members: Boolean(data.settings.only_admins_can_add_members),
+        });
+      } else {
+        setGroupSettings({ ...groupSettings, ...settings });
+      }
+      
+      toast.success("Settings updated");
+      return { error: null };
+    } catch (err) {
+      console.error("API error:", err);
+      toast.error("Failed to update settings. Please try again.");
+      return { error: err as Error };
     }
-
-    setGroupSettings(newSettings);
-    toast.success("Settings updated");
-    return { error: null };
   };
 
   // STRICT PERMISSION: Only admins can send messages and add members
