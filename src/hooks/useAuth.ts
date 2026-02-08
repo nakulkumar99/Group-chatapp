@@ -79,6 +79,26 @@ export function useAuth() {
     return { error };
   }, []);
 
+  const deleteAccount = useCallback(async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      return { error: new Error("Not authenticated") };
+    }
+
+    const { error } = await supabase.functions.invoke("delete-account", {
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+      },
+    });
+
+    if (error) {
+      return { error };
+    }
+
+    await supabase.auth.signOut();
+    return { error: null };
+  }, []);
+
   return {
     user: state.user,
     session: state.session,
@@ -87,5 +107,6 @@ export function useAuth() {
     signUp,
     signIn,
     signOut,
+    deleteAccount,
   };
 }
