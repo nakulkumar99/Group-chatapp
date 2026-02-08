@@ -258,9 +258,9 @@ export function useGroupRole(groupId: string | null) {
     }
   };
 
-  // STRICT PERMISSION: Only admins can send messages and add members
-  const canSendMessages = isAdmin;
-  const canAddMembers = isAdmin;
+  // Permission checks based on group settings
+  const canSendMessages = groupSettings.only_admins_can_send ? isAdmin : true;
+  const canAddMembers = groupSettings.only_admins_can_add_members ? isAdmin : true;
 
   return {
     userRole,
