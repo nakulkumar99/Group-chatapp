@@ -110,6 +110,38 @@ export function useGroupRole(groupId: string | null) {
     fetchRoleData();
   }, [fetchRoleData]);
 
+  // Subscribe to realtime updates for group settings
+  useEffect(() => {
+    if (!groupId) return;
+
+    const channel = supabase
+      .channel(`group-settings-${groupId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'groups',
+          filter: `id=eq.${groupId}`,
+        },
+        (payload) => {
+          const newSettings = payload.new?.settings;
+          if (newSettings && typeof newSettings === 'object' && newSettings !== null) {
+            const settings = newSettings as Record<string, unknown>;
+            setGroupSettings({
+              only_admins_can_send: Boolean(settings.only_admins_can_send),
+              only_admins_can_add_members: Boolean(settings.only_admins_can_add_members),
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [groupId]);
+
   const setRole = async (targetUserId: string, role: AppRole) => {
     if (!groupId || !user || !isAdmin) {
       toast.error("Only admins can perform this action");
@@ -248,6 +280,9 @@ export function useGroupRole(groupId: string | null) {
       } else {
         setGroupSettings({ ...groupSettings, ...settings });
       }
+      
+      // Refetch to ensure full sync with database
+      await fetchRoleData();
       
       toast.success("Settings updated");
       return { error: null };
