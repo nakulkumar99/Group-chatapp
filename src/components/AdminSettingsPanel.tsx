@@ -55,7 +55,7 @@ export function AdminSettingsPanel({
     isCreator,
     groupRoles,
     groupSettings,
-    setRole,
+    updateRoleViaAPI,
     removeRole,
     updateSettings,
   } = useGroupRole(groupId);
@@ -116,7 +116,7 @@ export function AdminSettingsPanel({
     if (role === "remove") {
       await removeRole(userId);
     } else {
-      await setRole(userId, role);
+      await updateRoleViaAPI(userId, role);
     }
   };
 
