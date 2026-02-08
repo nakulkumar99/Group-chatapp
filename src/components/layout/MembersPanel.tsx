@@ -153,7 +153,7 @@ export function MembersPanel({
               <AdminSettingsPanel
                 groupId={groupId}
                 currentUserId={user.id}
-                variant="full"
+                variant="admin-only"
                 compact
               />
             </div>
