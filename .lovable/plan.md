@@ -1,253 +1,158 @@
 
-# Delete My Message & Scroll to Bottom Button Implementation
+# WhatsApp-like Admin Settings Panel
 
 ## Overview
+Create a unified, reusable `AdminSettingsPanel` component that consolidates Admin Settings, Manage Roles, and Appearance into a single card-style UI. This panel will be used in both the Members sidebar and the main Settings pane.
 
-This plan implements two features:
-1. **Delete Message** - "Delete for me" or "Delete for everyone" (within 5 min) with "Message deleted" placeholder
-2. **Scroll to Bottom Button** - Shows when scrolled up with unread count badge and smooth scroll
-
----
-
-## Feature 1: Delete My Message
-
-### Database Changes
-
-Add two new columns to the `messages` table:
-
-```sql
--- Add deletion columns to messages table
-ALTER TABLE public.messages 
-ADD COLUMN deleted_at timestamp with time zone DEFAULT NULL,
-ADD COLUMN deleted_for_everyone boolean DEFAULT false;
-```
-
-Update RLS policy to allow users to update their own messages for deletion:
-
-```sql
--- The existing UPDATE policy already allows: auth.uid() = user_id
--- No additional policy needed
-```
-
-### File: `src/hooks/useMessages.ts` (MODIFY)
-
-Add delete functionality:
+## Component Structure
 
 ```text
-New functions:
-- deleteForMe(messageId): Sets deleted_at for local filtering only
-- deleteForEveryone(messageId): Sets deleted_at and deleted_for_everyone=true
-  - Only allowed within 5 minutes of message creation
-
-Changes:
-- Update fetchMessages to filter out messages deleted_for_me by current user
-- Add realtime listener for UPDATE events to handle deletions
-- Local state: Track user's deleted message IDs for "delete for me"
++-------------------------------------------+
+| AdminSettingsPanel                        |
++-------------------------------------------+
+|  [Collapsible] Admin Settings    ^        |
+|  +-------------------------------+        |
+|  | Only admins can send messages   [  ]   |
+|  | Only admins can add members     [  ]   |
+|  +-------------------------------+        |
+|                                           |
+|  [Collapsible] Manage Roles      ^        |
+|  +-------------------------------+        |
+|  | [Avatar] Thapa      [role] [...]|      |
+|  | [Avatar] Nakul (you) [crown]    |      |
+|  +-------------------------------+        |
+|                                           |
+|  [Collapsible] Appearance        ^        |
+|  +-------------------------------+        |
+|  | [Sun] Light | [Moon] Dark *    |      |
+|  |                                |       |
+|  | Chat Wallpaper                 |       |
+|  | [img][img][img]                |       |
+|  | [img][img][img]                |       |
+|  |                                |       |
+|  | [Upload Custom Wallpaper]      |       |
+|  +-------------------------------+        |
++-------------------------------------------+
 ```
 
-### File: `src/components/MessageBubble.tsx` (MODIFY)
+## Files to Create/Modify
 
-Add delete UI and "Message deleted" placeholder:
+### 1. Refactor `src/components/AdminSettingsPanel.tsx`
+Transform the existing component into a comprehensive unified panel with three sections:
 
-```text
-New imports:
-- Trash2 icon
-- DropdownMenu components
-- AlertDialog for confirmation
+**Changes:**
+- Add `variant` prop: `"full"` (all sections) or `"admin-only"` (admin settings + roles only)
+- Add `showAppearance` prop to control Appearance section visibility
+- Integrate theme toggle (Light/Dark segmented control)
+- Integrate wallpaper selection grid
+- Add Upload Custom Wallpaper button
+- Style with WhatsApp green accent and neutral grays
+- Icons: Shield (admin settings), Crown (owner), User roles icons
 
-New props:
-- onDelete: (messageId: string, forEveryone: boolean) => void
-- isDeleted: boolean
-- deletedForEveryone: boolean
+### 2. Update `src/components/layout/SettingsPanel.tsx`
+- Replace separate AdminSettingsPanel + Appearance controls with unified `AdminSettingsPanel` component
+- Pass `variant="full"` to show all sections
 
-UI Changes:
-1. Add Trash icon in action buttons (visible for own messages)
-2. Show dropdown menu on click:
-   - "Delete for me" (always available)
-   - "Delete for everyone" (only if within 5 min)
-3. Show "Message deleted" placeholder for deleted messages:
-   - Gray italicized text: "🚫 This message was deleted"
-   - No reactions, no actions, minimal styling
-```
+### 3. Update `src/components/layout/MembersPanel.tsx`
+- Replace existing AdminSettingsPanel usage with unified component
+- Pass `variant="full"` or `showAppearance={true}` to include Appearance section
 
-### File: `src/components/layout/ChatArea.tsx` (MODIFY)
+## Implementation Details
 
-Pass delete handler to MessageBubble:
-
-```text
-Changes:
-- Get deleteMessage function from useMessages
-- Pass onDelete prop to MessageBubble
-- Handle deleted message display logic
-```
-
----
-
-## Feature 2: Scroll to Bottom Button
-
-### File: `src/components/layout/ChatArea.tsx` (MODIFY)
-
-Add scroll detection and button:
-
-```text
-New state:
-- showScrollButton: boolean
-- unreadBelowCount: number
-- scrollAreaRef: ref to access ScrollArea viewport
-
-New imports:
-- ArrowDown icon
-
-New logic:
-1. Track scroll position using onScroll event
-2. If scrolled up > 200px from bottom, show button
-3. Count new messages that arrived while scrolled up
-4. Reset unread count when scrolling to bottom
-
-New UI:
-- Floating button at bottom-right of messages area
-- Badge showing unread count (if > 0)
-- Smooth scroll animation on click
-```
-
-### Component: Scroll to Bottom Button
-
-```text
-Position: fixed bottom-20 right-4 (above chat input)
-Style:
-  - Circular button with ArrowDown icon
-  - Primary background
-  - Badge in top-right corner for unread count
-  - Animate in/out with framer-motion
-
-Behavior:
-  - onClick: scrollTo bottom with smooth behavior
-  - Badge shows count of messages received while scrolled up
-```
-
----
-
-## Implementation Flow
-
-### Delete Message Flow
-
-```text
-User clicks trash icon
-        │
-        ▼
-   Show dropdown
-   ┌─────────────────────────┐
-   │ Delete for me           │
-   │ Delete for everyone     │ ← Only if < 5 min old
-   └─────────────────────────┘
-        │
-        ▼
-   Confirmation modal
-   "Delete this message?"
-        │
-        ▼
-  ┌─────┴─────┐
-  │           │
-  ▼           ▼
-For Me     For Everyone
-  │           │
-  ▼           ▼
-Local      Database
-state      update
-only       + realtime
-           broadcast
-```
-
-### Scroll Button Flow
-
-```text
-User scrolls up
-        │
-        ▼
-  Distance > 200px?
-        │
-    ┌───┴───┐
-    │       │
-    No     Yes
-    │       │
-    ▼       ▼
-  Hide    Show
-button   button
-           │
-           ▼
-    New message arrives
-           │
-           ▼
-    Increment badge
-           │
-           ▼
-    User clicks button
-           │
-           ▼
-    Smooth scroll + reset badge
-```
-
----
-
-## Files Summary
-
-| File | Action | Description |
-|------|--------|-------------|
-| `supabase/migrations/...` | CREATE | Add deleted_at, deleted_for_everyone columns |
-| `src/hooks/useMessages.ts` | MODIFY | Add delete functions, filter deleted messages |
-| `src/components/MessageBubble.tsx` | MODIFY | Add delete UI, show deleted placeholder |
-| `src/components/layout/ChatArea.tsx` | MODIFY | Add scroll button, pass delete handler |
-
----
-
-## UI Preview
-
-### Deleted Message Placeholder
-```text
-┌─────────────────────────────────────────┐
-│ 🚫 This message was deleted             │
-│                              12:34 PM   │
-└─────────────────────────────────────────┘
-```
-
-### Scroll to Bottom Button
-```text
-                    ┌───┐
-                    │ 3 │ ← Unread badge
-              ┌─────┴───┴─────┐
-              │       ↓       │
-              │   (Arrow)     │
-              └───────────────┘
-```
-
-### Delete Dropdown Menu
-```text
-┌─────────────────────────┐
-│ 🗑️ Delete for me        │
-├─────────────────────────┤
-│ 🗑️ Delete for everyone  │ ← Red text, only if < 5 min
-└─────────────────────────┘
-```
-
----
-
-## Time Check Logic (5 min rule)
-
+### Props Interface
 ```typescript
-const canDeleteForEveryone = (createdAt: string): boolean => {
-  const fiveMinutesMs = 5 * 60 * 1000;
-  const messageTime = new Date(createdAt).getTime();
-  const now = Date.now();
-  return now - messageTime <= fiveMinutesMs;
-};
+interface AdminSettingsPanelProps {
+  groupId: string;
+  currentUserId: string;
+  variant?: "full" | "admin-only";  // full includes Appearance
+  compact?: boolean;  // for narrow sidebar display
+}
 ```
 
----
+### Section 1: Admin Settings
+- Shield icon (`ShieldCheck`) in section header
+- Two toggle switches:
+  - "Only admins can send messages"
+  - "Only admins can add members"
+- Collapsible with animated chevron
 
-## Edge Cases Handled
+### Section 2: Manage Roles
+- Shield icon (`Circle` or custom) in section header
+- User list with:
+  - Avatar (32x32px)
+  - Username + "(you)" label for current user
+  - Role icon: Crown (owner/amber), ShieldCheck (admin/green), Shield (moderator/sky), User (member/gray)
+  - Inline dropdown menu (ChevronDown) for role changes
+- Only show dropdown for non-owner, non-self members when user is admin
 
-1. **Delete for everyone after 5 min**: Button disabled/hidden
-2. **Deleted message reactions**: Hidden along with message
-3. **Scroll button position**: Above chat input, responsive
-4. **Realtime deletion**: Other users see "Message deleted" instantly
-5. **Delete for me**: Only affects local user, others still see message
+### Section 3: Appearance
+- Palette or Paintbrush icon in section header
+- Segmented toggle: Light (Sun icon) | Dark (Moon icon)
+  - Active state: filled button with primary color
+  - Inactive state: outline button
+- "Chat Wallpaper" label with Image icon
+- 3-column grid of wallpaper thumbnails (64px height)
+  - Selected wallpaper shows checkmark overlay
+- "Upload Custom Wallpaper" button (full width, outline style)
+- If custom wallpaper active, show preview with checkmark
+
+### Styling Specifications
+
+**Colors:**
+- Green accent: `hsl(149 67% 38%)` - WhatsApp green (already in CSS)
+- Dark gray background: `bg-card/95` with `backdrop-blur-xl`
+- Section backgrounds: `bg-accent/30`
+- Border: `border-border`
+
+**Spacing:**
+- Section header padding: `px-3 py-2`
+- Section content padding: `p-3` or `p-4`
+- Gap between sections: `space-y-4`
+- Avatar size: `w-8 h-8` (compact) or `w-10 h-10` (full)
+- Wallpaper thumbnail grid gap: `gap-2`
+- Wallpaper thumbnail height: `h-16`
+
+**Typography:**
+- Section headers: `font-medium text-sm`
+- Toggle labels: `text-sm`
+- Username: `text-sm font-medium`
+- Role label: `text-xs text-primary`
+
+**Animations:**
+- Chevron rotation: 180deg on open (framer-motion)
+- Collapsible content: height animation
+
+### Icon Mapping
+| Element | Icon | Color |
+|---------|------|-------|
+| Admin Settings header | ShieldCheck | foreground |
+| Manage Roles header | Circle (outlined) | foreground |
+| Appearance header | Palette or Image | foreground |
+| Owner role | Crown | amber-500 |
+| Admin role | ShieldCheck | primary (green) |
+| Moderator role | Shield | sky-500 |
+| Member role | User | muted-foreground |
+| Light mode | Sun | - |
+| Dark mode | Moon | - |
+
+## Dual Placement Demo
+
+Both `MembersPanel` and `SettingsPanel` will render the same `AdminSettingsPanel` component:
+
+**MembersPanel (narrow, 280px):**
+- Compact spacing
+- Same three collapsible sections
+- Visible via Settings gear button toggle
+
+**SettingsPanel (320px):**
+- Standard spacing
+- Same three collapsible sections
+- Primary content of the panel
+
+## Technical Considerations
+
+1. **Theme Context**: Import `useThemeContext` from ThemeProvider for appearance controls
+2. **File Upload**: Reuse existing file input pattern from SettingsPanel
+3. **Role Permissions**: Only show sections/controls user has permission to modify
+4. **Non-Admin View**: If user is not admin, only show Appearance section
+5. **Realtime Updates**: Leverage existing `useGroupRole` hook subscriptions
