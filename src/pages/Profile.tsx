@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, User, Settings, Lock, ImageIcon, LogOut, Loader2, Link2, Check } from "lucide-react";
+import { ArrowLeft, User, Settings, Lock, ImageIcon, LogOut, Loader2, Link2, Check, Trash2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { Button } from "@/components/ui/button";
@@ -15,16 +15,18 @@ import { toast } from "sonner";
 import { AvatarUploader } from "@/components/profile/AvatarUploader";
 import { ProfileImagesGallery } from "@/components/profile/ProfileImagesGallery";
 import { ChangePasswordForm } from "@/components/profile/ChangePasswordForm";
+import { DeleteAccountModal } from "@/components/profile/DeleteAccountModal";
 
 export default function Profile() {
   const navigate = useNavigate();
-  const { user, signOut, initializing } = useAuth();
+  const { user, signOut, deleteAccount, initializing } = useAuth();
   const { profile, loading: profileLoading, updateProfile } = useProfile();
   const [username, setUsername] = useState("");
   const [bio, setBio] = useState("");
   const [selectedAvatar, setSelectedAvatar] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState("profile");
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
 
   const handleCopyProfileLink = async () => {
@@ -85,6 +87,16 @@ export default function Profile() {
 
   const handleSignOut = async () => {
     await signOut();
+    navigate("/auth");
+  };
+
+  const handleDeleteAccount = async () => {
+    const { error } = await deleteAccount();
+    if (error) {
+      toast.error("Failed to delete account. Please try again.");
+      return;
+    }
+    toast.success("Account deleted successfully");
     navigate("/auth");
   };
 
@@ -294,9 +306,32 @@ export default function Profile() {
                   Sign Out
                 </Button>
               </div>
+
+              <Separator />
+
+              <div>
+                <h3 className="text-sm font-medium text-destructive mb-2">Danger Zone</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Permanently delete your account and all associated data. This action cannot be undone.
+                </p>
+                <Button
+                  onClick={() => setShowDeleteModal(true)}
+                  variant="destructive"
+                  className="w-full"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete Account Permanently
+                </Button>
+              </div>
             </motion.div>
           </TabsContent>
         </Tabs>
+
+        <DeleteAccountModal
+          open={showDeleteModal}
+          onOpenChange={setShowDeleteModal}
+          onConfirm={handleDeleteAccount}
+        />
       </main>
     </div>
   );
