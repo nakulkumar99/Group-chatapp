@@ -11,6 +11,10 @@ interface VerifyOtpRequest {
   otp_code: string;
 }
 
+// Brute-force protection constants
+const MAX_FAILED_ATTEMPTS = 5;
+const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
+
 Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -19,7 +23,51 @@ Deno.serve(async (req) => {
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+    // Check for authentication - OTP verification should only be done by authenticated users
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      console.log("Missing or invalid authorization header");
+      return new Response(
+        JSON.stringify({
+          success: false,
+          message: "Authentication required",
+        }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // Verify the user is authenticated
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(token);
+
+    if (claimsError || !claimsData?.claims) {
+      console.log("Invalid token:", claimsError?.message);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          message: "Invalid authentication token",
+        }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    const userId = claimsData.claims.sub;
+    console.log("Authenticated user:", userId);
+
+    // Service role client for database operations
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Validate request
@@ -52,6 +100,29 @@ Deno.serve(async (req) => {
         }),
         {
           status: 422,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // Brute-force protection: Check recent failed attempts for this phone number
+    const lockoutTime = new Date(Date.now() - LOCKOUT_DURATION_MS).toISOString();
+    const { count: failedAttempts } = await supabase
+      .from("otp_verifications")
+      .select("id", { count: "exact", head: true })
+      .eq("phone_number", phone_number)
+      .eq("verified", false)
+      .gte("created_at", lockoutTime);
+
+    if (failedAttempts && failedAttempts >= MAX_FAILED_ATTEMPTS) {
+      console.log("Too many failed attempts for phone:", phone_number);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          message: "Too many failed attempts. Please try again in 15 minutes.",
+        }),
+        {
+          status: 429,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
@@ -90,21 +161,30 @@ Deno.serve(async (req) => {
       .update({ verified: true })
       .eq("id", validOtp.id);
 
-    // Update profile phone_verified status
+    // Update profile phone_verified status for the authenticated user
     const { error: updateError } = await supabase
       .from("profiles")
       .update({
+        phone_number: phone_number,
         phone_verified: true,
         phone_verified_at: now,
       })
-      .eq("phone_number", phone_number);
+      .eq("user_id", userId);
 
     if (updateError) {
       console.error("Error updating profile:", updateError);
       // Don't fail - OTP was valid
     }
 
-    console.log("Phone verified successfully:", phone_number);
+    // Clean up old OTPs for this phone number (optional, reduces table size)
+    await supabase
+      .from("otp_verifications")
+      .delete()
+      .eq("phone_number", phone_number)
+      .eq("verified", true)
+      .neq("id", validOtp.id);
+
+    console.log("Phone verified successfully for user:", userId, "phone:", phone_number);
 
     return new Response(
       JSON.stringify({

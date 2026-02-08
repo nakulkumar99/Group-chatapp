@@ -10,6 +10,10 @@ interface SendOtpRequest {
   phone_number: string;
 }
 
+// Rate limit constants
+const MAX_OTP_SENDS_PER_IP_PER_HOUR = 10;
+const IP_RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+
 Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -18,8 +22,79 @@ Deno.serve(async (req) => {
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+    // Check for authentication - OTP should only be sent by authenticated users
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      console.log("Missing or invalid authorization header");
+      return new Response(
+        JSON.stringify({
+          success: false,
+          message: "Authentication required",
+        }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // Verify the user is authenticated
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(token);
+
+    if (claimsError || !claimsData?.claims) {
+      console.log("Invalid token:", claimsError?.message);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          message: "Invalid authentication token",
+        }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    const userId = claimsData.claims.sub;
+    console.log("Authenticated user:", userId);
+
+    // Service role client for database operations
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // IP-based rate limiting
+    const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || 
+                     req.headers.get("cf-connecting-ip") || 
+                     "unknown";
+    
+    // Check IP-based rate limit using otp_verifications table
+    const oneHourAgo = new Date(Date.now() - IP_RATE_LIMIT_WINDOW_MS).toISOString();
+    const { count: ipRequestCount } = await supabase
+      .from("otp_verifications")
+      .select("id", { count: "exact", head: true })
+      .gte("created_at", oneHourAgo);
+
+    // Simple IP rate limit check (checks global rate, could be enhanced with IP tracking table)
+    if (ipRequestCount && ipRequestCount > 100) {
+      console.log("Global rate limit exceeded");
+      return new Response(
+        JSON.stringify({
+          success: false,
+          message: "Service is busy. Please try again later.",
+        }),
+        {
+          status: 429,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
 
     // Validate request
     const { phone_number }: SendOtpRequest = await req.json();
@@ -40,7 +115,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Rate limiting: Check if OTP was sent in the last minute
+    // Rate limiting: Check if OTP was sent in the last minute for this phone
     const oneMinuteAgo = new Date(Date.now() - 60 * 1000).toISOString();
     const { data: recentOtp } = await supabase
       .from("otp_verifications")
