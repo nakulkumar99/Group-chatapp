@@ -41,6 +41,7 @@ interface AdminSettingsPanelProps {
   variant?: "full" | "admin-only";
   compact?: boolean;
   hideAdminSettings?: boolean;
+  hideManageRoles?: boolean;
 }
 
 type AppRole = "admin" | "moderator" | "member";
@@ -51,6 +52,7 @@ export function AdminSettingsPanel({
   variant = "full",
   compact = false,
   hideAdminSettings = false,
+  hideManageRoles = false,
 }: AdminSettingsPanelProps) {
   const {
     isAdmin,
@@ -209,7 +211,7 @@ export function AdminSettingsPanel({
       )}
 
       {/* Section 2: Manage Roles - Only show for admins */}
-      {isAdmin && (
+      {isAdmin && !hideManageRoles && (
         <Collapsible open={rolesOpen} onOpenChange={setRolesOpen}>
           <CollapsibleTrigger asChild>
             <Button

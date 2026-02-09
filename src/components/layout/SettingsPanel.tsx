@@ -3,7 +3,6 @@ import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AdminSettingsPanel } from "@/components/AdminSettingsPanel";
-import { useAuth } from "@/hooks/useAuth";
 
 interface SettingsPanelProps {
   isOpen: boolean;
@@ -12,8 +11,6 @@ interface SettingsPanelProps {
 }
 
 export function SettingsPanel({ isOpen, onClose, groupId }: SettingsPanelProps) {
-  const { user } = useAuth();
-
   return (
     <AnimatePresence>
       {isOpen && (
@@ -37,24 +34,16 @@ export function SettingsPanel({ isOpen, onClose, groupId }: SettingsPanelProps) 
             </Button>
           </div>
 
-          {/* Content - Unified AdminSettingsPanel with all 3 sections */}
+          {/* Content - Only Appearance */}
           <ScrollArea className="flex-1">
             <div className="p-4">
-              {groupId && user ? (
-                <AdminSettingsPanel
-                  groupId={groupId}
-                  currentUserId={user.id}
-                  variant="full"
-                  hideAdminSettings
-                />
-              ) : (
-                <AdminSettingsPanel
-                  groupId=""
-                  currentUserId={user?.id || ""}
-                  variant="full"
-                  hideAdminSettings
-                />
-              )}
+              <AdminSettingsPanel
+                groupId={groupId || ""}
+                currentUserId=""
+                variant="full"
+                hideAdminSettings
+                hideManageRoles
+              />
             </div>
           </ScrollArea>
         </motion.aside>
