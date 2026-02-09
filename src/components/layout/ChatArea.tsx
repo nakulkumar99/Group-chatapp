@@ -10,6 +10,7 @@ import {
   Settings,
   MessageCircle,
   ShieldAlert,
+  ShieldCheck,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -291,6 +292,17 @@ export function ChatArea({
           </div>
 
           <div className="flex items-center gap-1">
+            {isAdmin && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onOpenMembers}
+                className="hover:bg-accent rounded-full text-primary"
+                title="Admin Settings"
+              >
+                <ShieldCheck className="w-5 h-5" />
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="icon"
