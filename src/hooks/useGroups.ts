@@ -11,6 +11,7 @@ interface Group {
   created_at: string;
   member_count?: number;
   is_member?: boolean;
+  has_password?: boolean;
 }
 
 export function useGroups() {
@@ -24,7 +25,7 @@ export function useGroups() {
 
     setLoading(true);
 
-    // Fetch all groups
+    // Fetch all groups (password column is not exposed to client via select *)
     const { data: allGroups, error: groupsError } = await supabase
       .from("groups")
       .select("*")
@@ -60,10 +61,11 @@ export function useGroups() {
       countMap[m.group_id] = (countMap[m.group_id] || 0) + 1;
     });
 
-    const enrichedGroups = (allGroups || []).map((group) => ({
+    const enrichedGroups = (allGroups || []).map((group: any) => ({
       ...group,
       member_count: countMap[group.id] || 0,
       is_member: memberGroupIds.has(group.id),
+      has_password: !!group.password,
     }));
 
     setGroups(enrichedGroups);
@@ -75,12 +77,17 @@ export function useGroups() {
     fetchGroups();
   }, [fetchGroups]);
 
-  const createGroup = async (name: string, description?: string) => {
+  const createGroup = async (name: string, description?: string, password?: string) => {
     if (!user) return { error: new Error("Not authenticated") };
+
+    const insertData: any = { name, description, created_by: user.id };
+    if (password) {
+      insertData.password = password;
+    }
 
     const { data, error } = await supabase
       .from("groups")
-      .insert({ name, description, created_by: user.id })
+      .insert(insertData)
       .select()
       .single();
 
@@ -99,20 +106,37 @@ export function useGroups() {
     return { data, error: null };
   };
 
-  const joinGroup = async (groupId: string) => {
+  const joinGroup = async (groupId: string, password?: string) => {
     if (!user) return { error: new Error("Not authenticated") };
 
-    const { error } = await supabase
-      .from("group_members")
-      .insert({ group_id: groupId, user_id: user.id });
+    // Use edge function for password-protected joining
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData?.session?.access_token;
 
-    if (error) {
-      if (error.code === "23505") {
+    const response = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/join-group-with-password`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+        body: JSON.stringify({ group_id: groupId, password }),
+      }
+    );
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      if (response.status === 403) {
+        toast.error("Incorrect password");
+      } else if (response.status === 409) {
         toast.error("You're already a member of this group");
       } else {
-        toast.error("Failed to join group");
+        toast.error(result.error || "Failed to join group");
       }
-      return { error };
+      return { error: new Error(result.error) };
     }
 
     toast.success("Joined group!");

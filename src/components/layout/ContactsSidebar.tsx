@@ -252,6 +252,7 @@ export function ContactsSidebar({
                       description={group.description}
                       memberCount={group.member_count || 0}
                       isMember={group.is_member || false}
+                      hasPassword={group.has_password || false}
                       onJoin={joinGroup}
                       onLeave={leaveGroup}
                       onOpen={handleGroupSelect}

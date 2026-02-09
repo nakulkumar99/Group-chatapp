@@ -145,6 +145,7 @@ export type Database = {
           description: string | null
           id: string
           name: string
+          password: string | null
           settings: Json | null
           updated_at: string
         }
@@ -154,6 +155,7 @@ export type Database = {
           description?: string | null
           id?: string
           name: string
+          password?: string | null
           settings?: Json | null
           updated_at?: string
         }
@@ -163,6 +165,7 @@ export type Database = {
           description?: string | null
           id?: string
           name?: string
+          password?: string | null
           settings?: Json | null
           updated_at?: string
         }
