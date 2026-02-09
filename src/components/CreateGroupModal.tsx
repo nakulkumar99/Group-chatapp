@@ -1,15 +1,16 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { X, Users, Loader2 } from "lucide-react";
+import { X, Users, Loader2, Lock } from "lucide-react";
 import { groupSchema } from "@/lib/validations";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 
 interface CreateGroupModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (name: string, description?: string) => Promise<unknown>;
+  onSubmit: (name: string, description?: string, password?: string) => Promise<unknown>;
 }
 
 export function CreateGroupModal({
@@ -19,6 +20,8 @@ export function CreateGroupModal({
 }: CreateGroupModalProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [password, setPassword] = useState("");
+  const [hasPassword, setHasPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -38,11 +41,18 @@ export function CreateGroupModal({
       return;
     }
 
+    if (hasPassword && !password.trim()) {
+      setErrors({ password: "Password is required when enabled" });
+      return;
+    }
+
     setLoading(true);
-    await onSubmit(name, description || undefined);
+    await onSubmit(name, description || undefined, hasPassword ? password : undefined);
     setLoading(false);
     setName("");
     setDescription("");
+    setPassword("");
+    setHasPassword(false);
     onClose();
   };
 
@@ -110,6 +120,36 @@ export function CreateGroupModal({
             />
             {errors.description && (
               <p className="text-destructive text-sm">{errors.description}</p>
+            )}
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Lock className="w-4 h-4 text-muted-foreground" />
+                <label className="text-sm font-medium text-foreground">
+                  Password Protected
+                </label>
+              </div>
+              <Switch checked={hasPassword} onCheckedChange={setHasPassword} />
+            </div>
+            {hasPassword && (
+              <div className="space-y-2">
+                <Input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter group password"
+                  className="h-12 bg-secondary border-border focus:border-primary"
+                  maxLength={50}
+                />
+                {errors.password && (
+                  <p className="text-destructive text-sm">{errors.password}</p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Members must enter this password to join the group.
+                </p>
+              </div>
             )}
           </div>
 

@@ -140,6 +140,7 @@ export default function Index() {
                       description={group.description}
                       memberCount={group.member_count || 0}
                       isMember={true}
+                      hasPassword={group.has_password || false}
                       onJoin={joinGroup}
                       onLeave={leaveGroup}
                       onOpen={(id) => navigate(`/chat/${id}`)}
@@ -166,6 +167,7 @@ export default function Index() {
                       description={group.description}
                       memberCount={group.member_count || 0}
                       isMember={group.is_member || false}
+                      hasPassword={group.has_password || false}
                       onJoin={joinGroup}
                       onLeave={leaveGroup}
                       onOpen={(id) => navigate(`/chat/${id}`)}
