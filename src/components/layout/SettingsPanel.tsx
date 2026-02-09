@@ -45,12 +45,14 @@ export function SettingsPanel({ isOpen, onClose, groupId }: SettingsPanelProps) 
                   groupId={groupId}
                   currentUserId={user.id}
                   variant="full"
+                  hideAdminSettings
                 />
               ) : (
                 <AdminSettingsPanel
                   groupId=""
                   currentUserId={user?.id || ""}
                   variant="full"
+                  hideAdminSettings
                 />
               )}
             </div>

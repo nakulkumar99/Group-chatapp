@@ -40,6 +40,7 @@ interface AdminSettingsPanelProps {
   currentUserId: string;
   variant?: "full" | "admin-only";
   compact?: boolean;
+  hideAdminSettings?: boolean;
 }
 
 type AppRole = "admin" | "moderator" | "member";
@@ -49,6 +50,7 @@ export function AdminSettingsPanel({
   currentUserId,
   variant = "full",
   compact = false,
+  hideAdminSettings = false,
 }: AdminSettingsPanelProps) {
   const {
     isAdmin,
@@ -152,7 +154,7 @@ export function AdminSettingsPanel({
   return (
     <div className="space-y-4">
       {/* Section 1: Admin Settings - Only show for admins */}
-      {isAdmin && (
+      {isAdmin && !hideAdminSettings && (
         <Collapsible open={settingsOpen} onOpenChange={setSettingsOpen}>
           <CollapsibleTrigger asChild>
             <Button
