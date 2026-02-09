@@ -39,18 +39,17 @@ Deno.serve(async (req) => {
     });
 
     // Verify JWT and get user
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
     
-    if (claimsError || !claimsData?.claims) {
-      console.log("JWT verification failed:", claimsError);
+    if (userError || !user) {
+      console.log("JWT verification failed:", userError);
       return new Response(
         JSON.stringify({ error: "Unauthorized" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const requestingUserId = claimsData.claims.sub as string;
+    const requestingUserId = user.id;
     console.log("Authenticated user:", requestingUserId);
 
     // Parse request body
