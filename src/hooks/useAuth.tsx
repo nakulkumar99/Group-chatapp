@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useContext, createContext, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -9,7 +9,16 @@ interface AuthState {
   initializing: boolean;
 }
 
-export function useAuth() {
+interface AuthContextValue extends AuthState {
+  signUp: (email: string, password: string, username: string) => Promise<{ error: any }>;
+  signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signOut: () => Promise<{ error: any }>;
+  deleteAccount: () => Promise<{ error: any }>;
+}
+
+const AuthContext = createContext<AuthContextValue | null>(null);
+
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({
     user: null,
     session: null,
@@ -18,10 +27,9 @@ export function useAuth() {
   });
 
   useEffect(() => {
-    // Set up auth state listener FIRST
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       setState({
         user: session?.user ?? null,
         session,
@@ -30,16 +38,10 @@ export function useAuth() {
       });
     });
 
-    // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session }, error }) => {
       if (error) {
         console.error("Session error:", error);
-        setState({
-          user: null,
-          session: null,
-          loading: false,
-          initializing: false,
-        });
+        setState({ user: null, session: null, loading: false, initializing: false });
       } else {
         setState({
           user: session?.user ?? null,
@@ -67,10 +69,7 @@ export function useAuth() {
   }, []);
 
   const signIn = useCallback(async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
     return { error };
   }, []);
 
@@ -81,32 +80,32 @@ export function useAuth() {
 
   const deleteAccount = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      return { error: new Error("Not authenticated") };
-    }
+    if (!session) return { error: new Error("Not authenticated") };
 
     const { error } = await supabase.functions.invoke("delete-account", {
-      headers: {
-        Authorization: `Bearer ${session.access_token}`,
-      },
+      headers: { Authorization: `Bearer ${session.access_token}` },
     });
 
-    if (error) {
-      return { error };
-    }
-
+    if (error) return { error };
     await supabase.auth.signOut();
     return { error: null };
   }, []);
 
-  return {
-    user: state.user,
-    session: state.session,
-    loading: state.loading,
-    initializing: state.initializing,
+  const value: AuthContextValue = {
+    ...state,
     signUp,
     signIn,
     signOut,
     deleteAccount,
   };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
 }
