@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { toast } from "sonner";
@@ -35,8 +35,16 @@ export function useGroupRole(groupId: string | null) {
   });
   const [loading, setLoading] = useState(true);
 
+  const userIdRef = useRef(user?.id);
+  const fetchCountRef = useRef(0);
+
+  useEffect(() => {
+    userIdRef.current = user?.id;
+  }, [user?.id]);
+
   const fetchRoleData = useCallback(async () => {
-    if (!groupId || !user) {
+    const currentUserId = userIdRef.current;
+    if (!groupId || !currentUserId) {
       setUserRole(null);
       setIsAdmin(false);
       setIsCreator(false);
@@ -46,16 +54,25 @@ export function useGroupRole(groupId: string | null) {
       return;
     }
 
+    const currentFetch = ++fetchCountRef.current;
     setLoading(true);
 
-    // Fetch group info to check if user is creator
-    const { data: group } = await supabase
+    // Fetch group info
+    const { data: group, error: groupError } = await supabase
       .from("groups")
       .select("created_by, settings")
       .eq("id", groupId)
       .single();
 
-    const isGroupCreator = group?.created_by === user.id;
+    if (groupError) {
+      console.error("Failed to fetch group:", groupError);
+      setLoading(false);
+      return;
+    }
+
+    if (fetchCountRef.current !== currentFetch) return;
+
+    const isGroupCreator = group?.created_by === currentUserId;
     setIsCreator(isGroupCreator);
     setCreatorId(group?.created_by || null);
 
@@ -67,23 +84,39 @@ export function useGroupRole(groupId: string | null) {
       });
     }
 
-    // Fetch user's role in the group
-    const { data: roleData } = await supabase
+    // Fetch user's role
+    const { data: roleData, error: roleError } = await supabase
       .from("user_roles")
       .select("*")
       .eq("group_id", groupId)
-      .eq("user_id", user.id)
-      .single();
+      .eq("user_id", currentUserId)
+      .maybeSingle();
+
+    if (roleError) {
+      console.error("Failed to fetch user role:", roleError);
+      setLoading(false);
+      return;
+    }
+
+    if (fetchCountRef.current !== currentFetch) return;
 
     const role = roleData?.role as AppRole | null;
     setUserRole(role);
     setIsAdmin(isGroupCreator || role === "admin");
 
     // Fetch all roles in the group
-    const { data: allRoles } = await supabase
+    const { data: allRoles, error: allRolesError } = await supabase
       .from("user_roles")
       .select("*")
       .eq("group_id", groupId);
+
+    if (allRolesError) {
+      console.error("Failed to fetch group roles:", allRolesError);
+      setLoading(false);
+      return;
+    }
+
+    if (fetchCountRef.current !== currentFetch) return;
 
     if (allRoles) {
       const userIds = allRoles.map((r) => r.user_id);
@@ -91,6 +124,8 @@ export function useGroupRole(groupId: string | null) {
         .from("profiles")
         .select("user_id, username, avatar_url")
         .in("user_id", userIds);
+
+      if (fetchCountRef.current !== currentFetch) return;
 
       const profileMap: Record<string, { username: string; avatar_url: string | null }> = {};
       profiles?.forEach((p) => {
@@ -107,11 +142,11 @@ export function useGroupRole(groupId: string | null) {
     }
 
     setLoading(false);
-  }, [groupId, user]);
+  }, [groupId]);
 
   useEffect(() => {
     fetchRoleData();
-  }, [fetchRoleData]);
+  }, [fetchRoleData, user?.id]);
 
   // Subscribe to realtime updates for group settings
   useEffect(() => {
@@ -176,16 +211,14 @@ export function useGroupRole(groupId: string | null) {
       return { error: new Error("Permission denied") };
     }
 
-    // Check if role already exists
     const { data: existing } = await supabase
       .from("user_roles")
       .select("id")
       .eq("group_id", groupId)
       .eq("user_id", targetUserId)
-      .single();
+      .maybeSingle();
 
     if (existing) {
-      // Update existing role
       const { error } = await supabase
         .from("user_roles")
         .update({ role })
@@ -196,7 +229,6 @@ export function useGroupRole(groupId: string | null) {
         return { error };
       }
     } else {
-      // Insert new role
       const { error } = await supabase.from("user_roles").insert({
         group_id: groupId,
         user_id: targetUserId,
@@ -214,7 +246,6 @@ export function useGroupRole(groupId: string | null) {
     return { error: null };
   };
 
-  // Server-side validated role update via edge function
   const updateRoleViaAPI = async (targetUserId: string, newRole: AppRole) => {
     if (!groupId || !user) {
       toast.error("Only admins can perform this action");
@@ -299,7 +330,6 @@ export function useGroupRole(groupId: string | null) {
         return { error: new Error(data.error) };
       }
 
-      // Update local state with the returned settings
       if (data?.settings) {
         setGroupSettings({
           only_admins_can_send: Boolean(data.settings.only_admins_can_send),
@@ -309,7 +339,6 @@ export function useGroupRole(groupId: string | null) {
         setGroupSettings({ ...groupSettings, ...settings });
       }
       
-      // Refetch to ensure full sync with database
       await fetchRoleData();
       
       toast.success("Settings updated");
@@ -321,7 +350,6 @@ export function useGroupRole(groupId: string | null) {
     }
   };
 
-  // Permission checks based on group settings
   const canSendMessages = groupSettings.only_admins_can_send ? isAdmin : true;
   const canAddMembers = groupSettings.only_admins_can_add_members ? isAdmin : true;
 
