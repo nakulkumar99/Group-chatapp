@@ -1,60 +1,45 @@
 
 
-## Plan: Fix Role Assignment UI Sync Issues
+## Plan: Fix Role Assignment Bugs
 
-### Root Cause
+### Problems Found
 
-The edge function and database are working correctly -- roles ARE being saved. The problem is the UI fails to reliably reflect the saved state due to three bugs in `src/hooks/useGroupRole.ts`.
+After reviewing the code, I found these bugs:
 
-### Bug 1: Unstable `fetchRoleData` Reference
+1. **AdminSettingsPanel "Manage Roles" canModify logic is wrong** (line 242 in `AdminSettingsPanel.tsx`):
+   - Currently: `const canModify = isCreator && member.user_id !== currentUserId;`
+   - This only allows the group **creator** to modify roles. If a user is promoted to admin (but isn't the creator), they can SEE the Manage Roles section but the dropdown never appears -- they can't actually change anyone's role.
+   - Also missing: preventing modification of the group creator's role (the edge function blocks it, but the UI should too).
 
-The `fetchRoleData` callback has `[groupId, user]` in its dependency array. The `user` object from `useAuth` gets a new reference on every auth state change. This causes `fetchRoleData` to be recreated, which triggers the realtime subscription effect (depends on `fetchRoleData`) to unsubscribe and resubscribe repeatedly.
+2. **No realtime subscription for `user_roles` table** in `useGroupRole.ts`:
+   - After a role is changed by another admin, the UI won't update until the page is refreshed. The hook subscribes to `groups` table changes (for settings) but not `user_roles`.
 
-**Fix:** Change `useCallback` deps from `[groupId, user]` to `[groupId, user?.id]`, and use a ref for user ID inside the function.
-
-### Bug 2: Silent Query Failures in `fetchRoleData`
-
-The three Supabase queries inside `fetchRoleData` (groups, user role, all roles) do not check for errors. If any query fails (e.g., due to a transient network issue), the function silently sets stale or empty data.
-
-**Fix:** Add error checks after each query. If errors occur, log them and keep existing state instead of overwriting with empty data.
-
-### Bug 3: Race Condition on Refetch
-
-After `updateRoleViaAPI` succeeds, it calls `fetchRoleData()`. Simultaneously, the realtime subscription fires and also calls `fetchRoleData()`. Two concurrent fetches can cause state to be updated with stale data from the slower call.
-
-**Fix:** Use a fetch counter or abort pattern to ensure only the latest fetch result is applied to state.
+3. **`creatorId` not exposed from `useGroupRole`**:
+   - The hook knows the `created_by` value but only exposes a boolean `isCreator`. The AdminSettingsPanel needs the actual creator ID to prevent showing the modify dropdown for the group owner.
 
 ### Changes
 
-**File: `src/hooks/useGroupRole.ts`**
+#### 1. `src/hooks/useGroupRole.ts`
+- Add a `creatorId` state variable and expose it in the return
+- Store `group.created_by` when fetched
+- Add a realtime subscription for `user_roles` table changes (same pattern as the `groups` subscription) so role changes sync across clients
 
-1. Store `user?.id` in a ref and use `user?.id` in the `useCallback` dependency array instead of `user`
-2. Add error handling to all three queries in `fetchRoleData`
-3. Add a fetch counter (ref) to `fetchRoleData` so that only the result from the latest call is applied to state
-4. Keep the realtime subscription deps stable by depending on `[groupId]` only, using the ref-based `fetchRoleData`
+#### 2. `src/components/AdminSettingsPanel.tsx`
+- Get `creatorId` from `useGroupRole`
+- Fix `canModify` logic:
+  - Change from `isCreator && member.user_id !== currentUserId` to `isAdmin && member.user_id !== currentUserId && member.user_id !== creatorId`
+  - This allows any admin to modify roles (not just the creator) while protecting the creator's role from being changed
 
 ### Technical Details
 
-```text
-Before:
-  fetchRoleData = useCallback(async () => { ... }, [groupId, user])
-  // Realtime effect deps: [groupId, fetchRoleData]
+**`useGroupRole.ts` changes:**
+- New state: `const [creatorId, setCreatorId] = useState<string | null>(null);`
+- Set it: `setCreatorId(group?.created_by || null);`
+- New realtime channel subscribing to `user_roles` table filtered by `group_id`
+- Return `creatorId` in the hook's return object
 
-After:
-  userIdRef = useRef(user?.id)
-  fetchCountRef = useRef(0)
-  fetchRoleData = useCallback(async () => {
-    const currentFetch = ++fetchCountRef.current;
-    // ... queries with error checks ...
-    if (fetchCountRef.current !== currentFetch) return; // stale, skip
-    // ... set state ...
-  }, [groupId])  // stable dependency
-
-  // Update ref when user changes
-  useEffect(() => { userIdRef.current = user?.id }, [user?.id])
-
-  // Realtime effect deps: [groupId, fetchRoleData] -- now stable
-```
-
-No other files need changes. No database changes needed.
+**`AdminSettingsPanel.tsx` changes:**
+- Destructure `creatorId` from `useGroupRole`
+- Update line 242: `const canModify = isAdmin && member.user_id !== currentUserId && member.user_id !== creatorId;`
+- Update `getRoleIcon` to use `creatorId` instead of `isCreator && userId === currentUserId` so the crown shows for the actual group creator, not just the current user
 
