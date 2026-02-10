@@ -57,6 +57,7 @@ export function AdminSettingsPanel({
   const {
     isAdmin,
     isCreator,
+    creatorId,
     groupRoles,
     groupSettings,
     updateRoleViaAPI,
@@ -103,7 +104,7 @@ export function AdminSettingsPanel({
 
   const getRoleIcon = (role: AppRole | null, userId: string) => {
     // Creator gets crown
-    if (isCreator && userId === currentUserId) {
+    if (creatorId && userId === creatorId) {
       return <Crown className="w-4 h-4 text-amber-500" />;
     }
     switch (role) {
@@ -238,8 +239,7 @@ export function AdminSettingsPanel({
             >
               {members.map((member) => {
                 const memberRole = getMemberRole(member.user_id);
-                const isMemberCreator = isCreator && member.user_id === currentUserId;
-                const canModify = isCreator && member.user_id !== currentUserId;
+                const canModify = isAdmin && member.user_id !== currentUserId && member.user_id !== creatorId;
 
                 return (
                   <div
@@ -264,7 +264,7 @@ export function AdminSettingsPanel({
                     </div>
                     <div className="flex items-center gap-2">
                       {getRoleIcon(memberRole, member.user_id)}
-                      {canModify && !isMemberCreator && (
+                      {canModify && (
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="sm" className="h-7 px-2">

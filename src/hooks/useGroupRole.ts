@@ -27,6 +27,7 @@ export function useGroupRole(groupId: string | null) {
   const [userRole, setUserRole] = useState<AppRole | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isCreator, setIsCreator] = useState(false);
+  const [creatorId, setCreatorId] = useState<string | null>(null);
   const [groupRoles, setGroupRoles] = useState<UserRole[]>([]);
   const [groupSettings, setGroupSettings] = useState<GroupSettings>({
     only_admins_can_send: false,
@@ -39,6 +40,7 @@ export function useGroupRole(groupId: string | null) {
       setUserRole(null);
       setIsAdmin(false);
       setIsCreator(false);
+      setCreatorId(null);
       setGroupRoles([]);
       setLoading(false);
       return;
@@ -55,6 +57,7 @@ export function useGroupRole(groupId: string | null) {
 
     const isGroupCreator = group?.created_by === user.id;
     setIsCreator(isGroupCreator);
+    setCreatorId(group?.created_by || null);
 
     if (group?.settings && typeof group.settings === 'object' && group.settings !== null) {
       const settings = group.settings as Record<string, unknown>;
@@ -141,6 +144,31 @@ export function useGroupRole(groupId: string | null) {
       supabase.removeChannel(channel);
     };
   }, [groupId]);
+
+  // Subscribe to realtime updates for user_roles
+  useEffect(() => {
+    if (!groupId) return;
+
+    const channel = supabase
+      .channel(`group-roles-${groupId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'user_roles',
+          filter: `group_id=eq.${groupId}`,
+        },
+        () => {
+          fetchRoleData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [groupId, fetchRoleData]);
 
   const setRole = async (targetUserId: string, role: AppRole) => {
     if (!groupId || !user || !isAdmin) {
@@ -301,6 +329,7 @@ export function useGroupRole(groupId: string | null) {
     userRole,
     isAdmin,
     isCreator,
+    creatorId,
     groupRoles,
     groupSettings,
     loading,
