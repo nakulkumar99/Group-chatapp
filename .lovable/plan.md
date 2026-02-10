@@ -1,44 +1,45 @@
 
 
-## Plan: Verify and Fix Admin Settings Placement + Admin Icon Accessibility
+## Plan: Fix Role Assignment Bugs
 
-### Current State Analysis
+### Problems Found
 
-After reviewing the codebase, here is the current state:
+After reviewing the code, I found these bugs:
 
-1. **Settings Panel** (gear icon in chat header): Currently passes `hideAdminSettings` to hide the Admin Settings section. Shows only "Manage Roles" (for admins) and "Appearance" (for everyone).
+1. **AdminSettingsPanel "Manage Roles" canModify logic is wrong** (line 242 in `AdminSettingsPanel.tsx`):
+   - Currently: `const canModify = isCreator && member.user_id !== currentUserId;`
+   - This only allows the group **creator** to modify roles. If a user is promoted to admin (but isn't the creator), they can SEE the Manage Roles section but the dropdown never appears -- they can't actually change anyone's role.
+   - Also missing: preventing modification of the group creator's role (the edge function blocks it, but the UI should too).
 
-2. **Members Panel admin icon** (gear icon in Members panel header): Shows "Admin Settings" (with permission toggles) and "Manage Roles" (with member list) -- matches the screenshot reference.
+2. **No realtime subscription for `user_roles` table** in `useGroupRole.ts`:
+   - After a role is changed by another admin, the UI won't update until the page is refreshed. The hook subscribes to `groups` table changes (for settings) but not `user_roles`.
 
-3. **Admin icon in sidebar**: A shield icon exists in the contacts sidebar but only visible for global admins (super_admin/admin in `admin_roles` table). Navigates to `/admin`.
-
-4. **`/admin` route**: Already configured in `App.tsx`.
-
-### Issues Found
-
-- The Settings panel (gear icon) still renders `AdminSettingsPanel` with "Manage Roles" visible for admins. Per the user's request, Admin Settings should be **completely removed** from the Settings panel -- only Appearance should remain there.
-- The `/admin` route admin icon (ShieldCheck) in the sidebar is small and not prominently placed. It should be more easily accessible.
+3. **`creatorId` not exposed from `useGroupRole`**:
+   - The hook knows the `created_by` value but only exposes a boolean `isCreator`. The AdminSettingsPanel needs the actual creator ID to prevent showing the modify dropdown for the group owner.
 
 ### Changes
 
-#### 1. Remove Admin Settings entirely from Settings Panel (`src/components/layout/SettingsPanel.tsx`)
-- Stop rendering `AdminSettingsPanel` in the Settings panel entirely for the admin-related sections
-- The Settings panel should only show Appearance (theme + wallpaper)
-- This ensures Admin Settings and Manage Roles only appear via the admin icon in the Members panel
+#### 1. `src/hooks/useGroupRole.ts`
+- Add a `creatorId` state variable and expose it in the return
+- Store `group.created_by` when fetched
+- Add a realtime subscription for `user_roles` table changes (same pattern as the `groups` subscription) so role changes sync across clients
 
-#### 2. Add Admin Icon to Chat Header (`src/components/layout/ChatArea.tsx`)
-- Add a ShieldCheck icon button in the chat header (next to Users, Settings, and MoreVertical icons) visible only for group admins
-- This icon will toggle the Members panel with admin settings open, making it easily accessible
-
-#### 3. Keep `/admin` Route and Global Admin Icon
-- The existing `/admin` route and ShieldCheck icon in the sidebar for global admins remain unchanged
-- No changes needed to `Admin.tsx`, `useAdminRole.ts`, or `ContactsSidebar.tsx`
+#### 2. `src/components/AdminSettingsPanel.tsx`
+- Get `creatorId` from `useGroupRole`
+- Fix `canModify` logic:
+  - Change from `isCreator && member.user_id !== currentUserId` to `isAdmin && member.user_id !== currentUserId && member.user_id !== creatorId`
+  - This allows any admin to modify roles (not just the creator) while protecting the creator's role from being changed
 
 ### Technical Details
 
-**Files to modify:**
-- `src/components/layout/SettingsPanel.tsx` -- Remove `AdminSettingsPanel` import and usage for admin sections; keep only Appearance rendering
-- `src/components/layout/ChatArea.tsx` -- Add ShieldCheck admin icon button in the header for group admins, visible only when user has admin role in the group
+**`useGroupRole.ts` changes:**
+- New state: `const [creatorId, setCreatorId] = useState<string | null>(null);`
+- Set it: `setCreatorId(group?.created_by || null);`
+- New realtime channel subscribing to `user_roles` table filtered by `group_id`
+- Return `creatorId` in the hook's return object
 
-**No new files or dependencies required.**
+**`AdminSettingsPanel.tsx` changes:**
+- Destructure `creatorId` from `useGroupRole`
+- Update line 242: `const canModify = isAdmin && member.user_id !== currentUserId && member.user_id !== creatorId;`
+- Update `getRoleIcon` to use `creatorId` instead of `isCreator && userId === currentUserId` so the crown shows for the actual group creator, not just the current user
 
