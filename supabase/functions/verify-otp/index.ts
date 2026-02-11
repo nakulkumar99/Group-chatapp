@@ -161,15 +161,15 @@ Deno.serve(async (req) => {
       .update({ verified: true })
       .eq("id", validOtp.id);
 
-    // Update profile phone_verified status for the authenticated user
+    // Update phone data in user_phone_data table
     const { error: updateError } = await supabase
-      .from("profiles")
-      .update({
+      .from("user_phone_data")
+      .upsert({
+        user_id: userId,
         phone_number: phone_number,
         phone_verified: true,
         phone_verified_at: now,
-      })
-      .eq("user_id", userId);
+      }, { onConflict: "user_id" });
 
     if (updateError) {
       console.error("Error updating profile:", updateError);

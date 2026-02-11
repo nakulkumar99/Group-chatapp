@@ -49,9 +49,10 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    // Check if group exists
     const { data: group, error: groupError } = await serviceClient
       .from("groups")
-      .select("id, password")
+      .select("id, has_password")
       .eq("id", group_id)
       .single();
 
@@ -63,8 +64,14 @@ Deno.serve(async (req) => {
     }
 
     // Check password if group has one
-    if (group.password) {
-      if (!password || password !== group.password) {
+    if (group.has_password) {
+      const { data: groupPw } = await serviceClient
+        .from("group_passwords")
+        .select("password")
+        .eq("group_id", group_id)
+        .single();
+
+      if (!password || !groupPw || password !== groupPw.password) {
         return new Response(
           JSON.stringify({ error: "Incorrect password" }),
           { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
