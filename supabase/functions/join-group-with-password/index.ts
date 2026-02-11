@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import * as bcrypt from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -71,7 +72,16 @@ Deno.serve(async (req) => {
         .eq("group_id", group_id)
         .single();
 
-      if (!password || !groupPw || password !== groupPw.password) {
+      if (!password || !groupPw) {
+        return new Response(
+          JSON.stringify({ error: "Incorrect password" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Compare using bcrypt
+      const isValid = await bcrypt.compare(password, groupPw.password);
+      if (!isValid) {
         return new Response(
           JSON.stringify({ error: "Incorrect password" }),
           { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
