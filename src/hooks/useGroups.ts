@@ -93,11 +93,22 @@ export function useGroups() {
       return { error };
     }
 
-    // Store password in separate secure table if provided
+    // Store hashed password via edge function
     if (password) {
-      await supabase
-        .from("group_passwords")
-        .insert({ group_id: data.id, password });
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/set-group-password`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify({ group_id: data.id, password }),
+        }
+      );
     }
 
     // Auto-join the group

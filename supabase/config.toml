@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.join-group-with-password]
 verify_jwt = false
+
+[functions.set-group-password]
+verify_jwt = false
