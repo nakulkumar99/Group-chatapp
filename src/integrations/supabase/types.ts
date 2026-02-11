@@ -138,14 +138,37 @@ export type Database = {
           },
         ]
       }
+      group_passwords: {
+        Row: {
+          group_id: string
+          password: string
+        }
+        Insert: {
+          group_id: string
+          password: string
+        }
+        Update: {
+          group_id?: string
+          password?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_passwords_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: true
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       groups: {
         Row: {
           created_at: string
           created_by: string
           description: string | null
+          has_password: boolean
           id: string
           name: string
-          password: string | null
           settings: Json | null
           updated_at: string
         }
@@ -153,9 +176,9 @@ export type Database = {
           created_at?: string
           created_by: string
           description?: string | null
+          has_password?: boolean
           id?: string
           name: string
-          password?: string | null
           settings?: Json | null
           updated_at?: string
         }
@@ -163,9 +186,9 @@ export type Database = {
           created_at?: string
           created_by?: string
           description?: string | null
+          has_password?: boolean
           id?: string
           name?: string
-          password?: string | null
           settings?: Json | null
           updated_at?: string
         }
@@ -375,9 +398,6 @@ export type Database = {
           bio: string | null
           created_at: string
           id: string
-          phone_number: string | null
-          phone_verified: boolean | null
-          phone_verified_at: string | null
           status: Database["public"]["Enums"]["user_status"] | null
           updated_at: string
           user_id: string
@@ -388,9 +408,6 @@ export type Database = {
           bio?: string | null
           created_at?: string
           id?: string
-          phone_number?: string | null
-          phone_verified?: boolean | null
-          phone_verified_at?: string | null
           status?: Database["public"]["Enums"]["user_status"] | null
           updated_at?: string
           user_id: string
@@ -401,9 +418,6 @@ export type Database = {
           bio?: string | null
           created_at?: string
           id?: string
-          phone_number?: string | null
-          phone_verified?: boolean | null
-          phone_verified_at?: string | null
           status?: Database["public"]["Enums"]["user_status"] | null
           updated_at?: string
           user_id?: string
@@ -434,6 +448,27 @@ export type Database = {
           expires_at?: string | null
           id?: string
           reason?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_phone_data: {
+        Row: {
+          phone_number: string | null
+          phone_verified: boolean | null
+          phone_verified_at: string | null
+          user_id: string
+        }
+        Insert: {
+          phone_number?: string | null
+          phone_verified?: boolean | null
+          phone_verified_at?: string | null
+          user_id: string
+        }
+        Update: {
+          phone_number?: string | null
+          phone_verified?: boolean | null
+          phone_verified_at?: string | null
           user_id?: string
         }
         Relationships: []

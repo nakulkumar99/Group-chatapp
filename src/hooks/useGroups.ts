@@ -65,7 +65,7 @@ export function useGroups() {
       ...group,
       member_count: countMap[group.id] || 0,
       is_member: memberGroupIds.has(group.id),
-      has_password: !!group.password,
+      has_password: !!group.has_password,
     }));
 
     setGroups(enrichedGroups);
@@ -80,10 +80,7 @@ export function useGroups() {
   const createGroup = async (name: string, description?: string, password?: string) => {
     if (!user) return { error: new Error("Not authenticated") };
 
-    const insertData: any = { name, description, created_by: user.id };
-    if (password) {
-      insertData.password = password;
-    }
+    const insertData: any = { name, description, created_by: user.id, has_password: !!password };
 
     const { data, error } = await supabase
       .from("groups")
@@ -94,6 +91,13 @@ export function useGroups() {
     if (error) {
       toast.error("Failed to create group");
       return { error };
+    }
+
+    // Store password in separate secure table if provided
+    if (password) {
+      await supabase
+        .from("group_passwords")
+        .insert({ group_id: data.id, password });
     }
 
     // Auto-join the group

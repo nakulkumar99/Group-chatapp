@@ -12,11 +12,15 @@ interface Profile {
   username: string;
   avatar_url: string | null;
   bio: string | null;
+  status: UserStatus;
+  created_at: string;
+}
+
+interface PhoneData {
+  user_id: string;
   phone_number: string | null;
   phone_verified: boolean;
   phone_verified_at: string | null;
-  status: UserStatus;
-  created_at: string;
 }
 
 interface AdminRole {
@@ -33,6 +37,9 @@ interface UserBan {
 }
 
 export interface UserWithStatus extends Profile {
+  phone_number: string | null;
+  phone_verified: boolean;
+  phone_verified_at: string | null;
   role: GlobalAdminRole | null;
   isBanned: boolean;
   ban?: UserBan;
@@ -86,15 +93,11 @@ export function useAdminUsers() {
           .range(page * pageSize, (page + 1) * pageSize - 1);
 
         if (search) {
-          profileQuery = profileQuery.or(`username.ilike.%${search}%,phone_number.ilike.%${search}%`);
+          profileQuery = profileQuery.ilike("username", `%${search}%`);
         }
 
         if (statusFilter && statusFilter !== "banned") {
           profileQuery = profileQuery.eq("status", statusFilter);
-        }
-
-        if (verifiedFilter !== undefined) {
-          profileQuery = profileQuery.eq("phone_verified", verifiedFilter);
         }
 
         const { data: profiles, count, error: profileError } = await profileQuery;
@@ -106,6 +109,12 @@ export function useAdminUsers() {
         }
 
         const userIds = profiles.map((p) => p.user_id);
+
+        // Fetch phone data from separate secure table
+        const { data: phoneData } = await supabase
+          .from("user_phone_data")
+          .select("user_id, phone_number, phone_verified, phone_verified_at")
+          .in("user_id", userIds);
 
         // Fetch admin roles for these users
         const { data: adminRoles } = await supabase
@@ -119,22 +128,33 @@ export function useAdminUsers() {
           .select("*")
           .in("user_id", userIds);
 
+        const phoneMap = new Map<string, PhoneData>();
+        phoneData?.forEach((p) => phoneMap.set(p.user_id, p as PhoneData));
+
         const roleMap = new Map<string, GlobalAdminRole>();
         adminRoles?.forEach((r) => roleMap.set(r.user_id, r.role as GlobalAdminRole));
 
         const banMap = new Map<string, UserBan>();
         bans?.forEach((b) => banMap.set(b.user_id, b as UserBan));
 
-        let users: UserWithStatus[] = profiles.map((profile) => ({
-          ...profile,
-          phone_number: profile.phone_number || null,
-          phone_verified: profile.phone_verified || false,
-          phone_verified_at: profile.phone_verified_at || null,
-          status: (profile.status as UserStatus) || "active",
-          role: roleMap.get(profile.user_id) || null,
-          isBanned: banMap.has(profile.user_id),
-          ban: banMap.get(profile.user_id),
-        }));
+        let users: UserWithStatus[] = profiles.map((profile) => {
+          const phone = phoneMap.get(profile.user_id);
+          return {
+            ...profile,
+            phone_number: phone?.phone_number || null,
+            phone_verified: phone?.phone_verified || false,
+            phone_verified_at: phone?.phone_verified_at || null,
+            status: (profile.status as UserStatus) || "active",
+            role: roleMap.get(profile.user_id) || null,
+            isBanned: banMap.has(profile.user_id),
+            ban: banMap.get(profile.user_id),
+          };
+        });
+
+        // Apply phone verified filter client-side (data is in separate table)
+        if (verifiedFilter !== undefined) {
+          users = users.filter((u) => u.phone_verified === verifiedFilter);
+        }
 
         // Apply client-side filters
         if (roleFilter) {
@@ -165,10 +185,10 @@ export function useAdminUsers() {
       if (!user) return { success: false, message: "Not authenticated" };
 
       try {
-        // Check if phone number already exists
+        // Check if phone number already exists in user_phone_data
         const { data: existing } = await supabase
-          .from("profiles")
-          .select("id")
+          .from("user_phone_data")
+          .select("user_id")
           .eq("phone_number", data.phone_number)
           .single();
 
@@ -215,7 +235,7 @@ export function useAdminUsers() {
         // Check phone number uniqueness if updating
         if (data.phone_number) {
           const { data: existing } = await supabase
-            .from("profiles")
+            .from("user_phone_data")
             .select("user_id")
             .eq("phone_number", data.phone_number)
             .neq("user_id", userId)
@@ -248,7 +268,6 @@ export function useAdminUsers() {
 
         // Update profile
         const profileUpdate: Record<string, unknown> = {};
-        if (data.phone_number !== undefined) profileUpdate.phone_number = data.phone_number;
         if (data.username !== undefined) profileUpdate.username = data.username;
         if (data.bio !== undefined) profileUpdate.bio = data.bio;
         if (data.status !== undefined) profileUpdate.status = data.status;
@@ -261,6 +280,16 @@ export function useAdminUsers() {
             .eq("user_id", userId);
 
           if (profileError) throw profileError;
+        }
+
+        // Update phone data in separate table if provided
+        if (data.phone_number !== undefined) {
+          await supabase
+            .from("user_phone_data")
+            .upsert({
+              user_id: userId,
+              phone_number: data.phone_number,
+            }, { onConflict: "user_id" });
         }
 
         // Handle role assignment
