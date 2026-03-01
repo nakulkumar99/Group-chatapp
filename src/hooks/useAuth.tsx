@@ -66,6 +66,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           data: { username },
         },
       });
+      if (error?.message?.includes("Failed to fetch")) {
+        return { error: { message: "Network error. Please check your connection and try again." } };
+      }
       return { error };
     } catch (err: any) {
       if (err?.message?.includes("Failed to fetch")) {
@@ -78,6 +81,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signIn = useCallback(async (email: string, password: string) => {
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error?.message?.includes("Failed to fetch")) {
+        return { error: { message: "Network error. Please check your connection and try again." } };
+      }
       return { error };
     } catch (err: any) {
       if (err?.message?.includes("Failed to fetch")) {
