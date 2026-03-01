@@ -305,6 +305,27 @@ export type Database = {
           },
         ]
       }
+      otp_user_rate_limits: {
+        Row: {
+          id: string
+          request_count: number
+          user_id: string
+          window_start: string
+        }
+        Insert: {
+          id?: string
+          request_count?: number
+          user_id: string
+          window_start?: string
+        }
+        Update: {
+          id?: string
+          request_count?: number
+          user_id?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
       otp_verifications: {
         Row: {
           created_at: string | null

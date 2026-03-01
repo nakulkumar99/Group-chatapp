@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { useSignedUrl } from "@/hooks/useSignedUrl";
 import { CheckCheck, Download, FileText, Play, Image as ImageIcon, X, Pencil, Check, Pin, Trash2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -99,6 +100,7 @@ export function MessageBubble({
   const [showActions, setShowActions] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const { signedUrl } = useSignedUrl(message.file_url);
 
   // Check if message is deleted for everyone
   const isDeletedForEveryone = message.deleted_at && message.deleted_for_everyone;
@@ -128,10 +130,10 @@ export function MessageBubble({
   const isDocument = message.file_type && !isImage && !isVideo && !isAudio;
 
   const handleDownload = async () => {
-    if (!message.file_url) return;
+    if (!signedUrl) return;
     
     try {
-      const response = await fetch(message.file_url);
+      const response = await fetch(signedUrl);
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -142,7 +144,7 @@ export function MessageBubble({
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
     } catch {
-      window.open(message.file_url, "_blank");
+      window.open(signedUrl, "_blank");
     }
   };
 
@@ -176,7 +178,7 @@ export function MessageBubble({
   };
 
   const renderFileContent = () => {
-    if (!message.file_url) return null;
+    if (!signedUrl) return null;
 
     if (isImage) {
       return (
@@ -186,7 +188,7 @@ export function MessageBubble({
             onClick={() => setImagePreview(true)}
           >
             <img
-              src={message.file_url}
+              src={signedUrl}
               alt={message.file_name || "Image"}
               className="max-w-full max-h-64 rounded-lg object-cover hover:opacity-90 transition-opacity"
               loading="lazy"
@@ -207,7 +209,7 @@ export function MessageBubble({
                   <X className="w-5 h-5" />
                 </Button>
                 <img
-                  src={message.file_url}
+                  src={signedUrl}
                   alt={message.file_name || "Image"}
                   className="max-w-full max-h-[80vh] rounded-lg object-contain mx-auto"
                 />
@@ -222,7 +224,7 @@ export function MessageBubble({
       return (
         <div className="relative rounded-lg overflow-hidden mb-1 max-w-sm">
           <video
-            src={message.file_url}
+            src={signedUrl}
             controls
             className="max-w-full max-h-64 rounded-lg"
             preload="metadata"
@@ -240,7 +242,7 @@ export function MessageBubble({
             <Play className="w-5 h-5 text-primary-foreground" fill="currentColor" />
           </div>
           <audio
-            src={message.file_url}
+            src={signedUrl}
             controls
             className="h-8 flex-1"
             style={{ maxWidth: "200px" }}
