@@ -107,8 +107,11 @@ export default function Auth() {
         toast.success("Welcome back!");
         navigate("/");
       }
-    } catch {
-      toast.error("An unexpected error occurred.");
+    } catch (err: any) {
+      const msg = err?.message?.includes("Failed to fetch")
+        ? "Network error. Please check your connection and try again."
+        : "An unexpected error occurred.";
+      toast.error(msg);
       setLoading(false);
     }
   };

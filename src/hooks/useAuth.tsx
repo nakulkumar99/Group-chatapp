@@ -56,21 +56,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signUp = useCallback(async (email: string, password: string, username: string) => {
-    const redirectUrl = `${window.location.origin}/`;
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl,
-        data: { username },
-      },
-    });
-    return { error };
+    try {
+      const redirectUrl = `${window.location.origin}/`;
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: redirectUrl,
+          data: { username },
+        },
+      });
+      return { error };
+    } catch (err: any) {
+      if (err?.message?.includes("Failed to fetch")) {
+        return { error: { message: "Network error. Please check your connection and try again." } };
+      }
+      return { error: { message: "An unexpected error occurred. Please try again." } };
+    }
   }, []);
 
   const signIn = useCallback(async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error };
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      return { error };
+    } catch (err: any) {
+      if (err?.message?.includes("Failed to fetch")) {
+        return { error: { message: "Network error. Please check your connection and try again." } };
+      }
+      return { error: { message: "An unexpected error occurred. Please try again." } };
+    }
   }, []);
 
   const signOut = useCallback(async () => {
