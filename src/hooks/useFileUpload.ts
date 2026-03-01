@@ -58,7 +58,7 @@ export function useFileUpload() {
       const fileExt = file.name.split(".").pop();
       const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
 
-      const { error: uploadError, data } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from("chat-attachments")
         .upload(fileName, file, {
           cacheControl: "3600",
@@ -69,15 +69,19 @@ export function useFileUpload() {
         throw uploadError;
       }
 
-      // Get public URL
-      const { data: urlData } = supabase.storage
+      // Create signed URL (1 hour expiry)
+      const { data: signedData, error: signedError } = await supabase.storage
         .from("chat-attachments")
-        .getPublicUrl(fileName);
+        .createSignedUrl(fileName, 3600);
+
+      if (signedError || !signedData) {
+        throw signedError || new Error("Failed to create signed URL");
+      }
 
       setProgress(100);
 
       return {
-        url: urlData.publicUrl,
+        url: signedData.signedUrl,
         fileName: file.name,
         fileType: file.type,
       };

@@ -7,13 +7,11 @@ const corsHeaders = {
 };
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    // Validate request method
     if (req.method !== "PUT" && req.method !== "POST") {
       return new Response(
         JSON.stringify({ error: "Method not allowed" }),
@@ -21,29 +19,24 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get authorization header
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
-      console.log("Missing or invalid authorization header");
       return new Response(
         JSON.stringify({ error: "Unauthorized" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Create Supabase client with user's token
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     });
 
-    // Verify JWT and get user
     const token = authHeader.replace("Bearer ", "");
     const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
     
     if (claimsError || !claimsData?.claims) {
-      console.log("JWT verification failed:", claimsError);
       return new Response(
         JSON.stringify({ error: "Unauthorized" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -51,9 +44,7 @@ Deno.serve(async (req) => {
     }
 
     const requestingUserId = claimsData.claims.sub as string;
-    console.log("Authenticated user:", requestingUserId);
 
-    // Parse request body
     const { groupId, settings } = await req.json();
 
     if (!groupId || !settings) {
@@ -63,13 +54,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`Settings update request for group ${groupId}:`, settings);
-
-    // Use service role for permission check and update
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Check if user is the group creator OR has admin role
     const { data: group, error: groupError } = await supabaseAdmin
       .from("groups")
       .select("created_by, settings")
@@ -77,7 +64,6 @@ Deno.serve(async (req) => {
       .single();
 
     if (groupError || !group) {
-      console.log("Group not found:", groupError);
       return new Response(
         JSON.stringify({ error: "Group not found" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -86,7 +72,6 @@ Deno.serve(async (req) => {
 
     const isGroupCreator = group.created_by === requestingUserId;
 
-    // Check if user has admin role in the group
     const { data: userRole } = await supabaseAdmin
       .from("user_roles")
       .select("role")
@@ -97,35 +82,27 @@ Deno.serve(async (req) => {
     const isAdmin = isGroupCreator || userRole?.role === "admin";
 
     if (!isAdmin) {
-      console.log("Permission denied: User is not admin");
       return new Response(
         JSON.stringify({ error: "Only admins can update group settings" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Merge current settings with new settings
     const currentSettings = (group.settings as Record<string, unknown>) || {};
-    const newSettings = {
-      ...currentSettings,
-      ...settings,
-    };
+    const newSettings = { ...currentSettings, ...settings };
 
-    // Update group settings
     const { error: updateError } = await supabaseAdmin
       .from("groups")
       .update({ settings: newSettings })
       .eq("id", groupId);
 
     if (updateError) {
-      console.log("Failed to update settings:", updateError);
+      console.error("Settings update failed");
       return new Response(
         JSON.stringify({ error: "Failed to update settings" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
-    console.log("Settings updated successfully:", newSettings);
 
     return new Response(
       JSON.stringify({ success: true, settings: newSettings }),
@@ -133,7 +110,7 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
-    console.error("Error processing request:", error);
+    console.error("Request processing failed");
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
