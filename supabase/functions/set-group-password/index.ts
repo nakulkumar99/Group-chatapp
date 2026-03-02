@@ -37,16 +37,18 @@ Deno.serve(async (req) => {
 
     const { group_id, password } = await req.json();
 
-    if (!group_id || !password) {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+    if (!group_id || typeof group_id !== "string" || !uuidRegex.test(group_id)) {
       return new Response(
-        JSON.stringify({ error: "group_id and password are required" }),
+        JSON.stringify({ error: "Invalid or missing group_id" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    if (typeof password !== "string" || password.length < 1) {
+    if (!password || typeof password !== "string" || password.length < 8 || password.length > 128) {
       return new Response(
-        JSON.stringify({ error: "Password must be a non-empty string" }),
+        JSON.stringify({ error: "Password must be 8-128 characters" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
