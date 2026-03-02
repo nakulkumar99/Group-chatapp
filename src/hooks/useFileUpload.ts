@@ -45,7 +45,8 @@ export function useFileUpload() {
       "audio/ogg",
     ];
 
-    if (!allowedTypes.includes(file.type)) {
+    const mimeType = file.type.split(';')[0];
+    if (!allowedTypes.includes(mimeType)) {
       toast.error("File type not supported");
       return null;
     }
