@@ -45,11 +45,28 @@ Deno.serve(async (req) => {
 
     const requestingUserId = claimsData.claims.sub as string;
 
-    const { groupId, settings } = await req.json();
+    const body = await req.json();
+    const { groupId, settings } = body;
 
-    if (!groupId || !settings || typeof settings !== 'object') {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+    if (!groupId || typeof groupId !== "string" || !uuidRegex.test(groupId)) {
       return new Response(
-        JSON.stringify({ error: "Missing or invalid required fields" }),
+        JSON.stringify({ error: "Invalid or missing groupId" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!settings || typeof settings !== 'object' || Array.isArray(settings)) {
+      return new Response(
+        JSON.stringify({ error: "Missing or invalid settings object" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (JSON.stringify(settings).length > 1024) {
+      return new Response(
+        JSON.stringify({ error: "Settings object too large" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

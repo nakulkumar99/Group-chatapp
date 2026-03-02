@@ -46,9 +46,25 @@ Deno.serve(async (req) => {
 
     const { groupId, targetUserId, newRole } = await req.json();
 
-    if (!groupId || !targetUserId || !newRole) {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+    if (!groupId || typeof groupId !== "string" || !uuidRegex.test(groupId)) {
       return new Response(
-        JSON.stringify({ error: "Missing required fields: groupId, targetUserId, newRole" }),
+        JSON.stringify({ error: "Invalid or missing groupId" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!targetUserId || typeof targetUserId !== "string" || !uuidRegex.test(targetUserId)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid or missing targetUserId" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!newRole || typeof newRole !== "string") {
+      return new Response(
+        JSON.stringify({ error: "Missing required field: newRole" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
