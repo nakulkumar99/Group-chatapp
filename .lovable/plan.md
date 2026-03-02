@@ -2,28 +2,35 @@
 
 ## Analysis
 
-The "Failed to fetch" error is a **network connectivity issue** between the browser preview and the backend API. It is NOT a code bug. Here's the evidence:
+The issue has two parts:
 
-- The backend database is online and responsive — I confirmed that users `nakul@gmail.com`, `thapa@gmail.com`, and `xadeve7941@coswz.com` all exist in the database.
-- The client configuration (URL, API key) is correct.
-- The error occurs at the browser's `fetch()` level before any response is received, meaning the server is temporarily unreachable from the preview environment.
+1. **"Invalid login credentials"** — The auth logs confirm the backend IS reachable (status 400, not a network failure). The passwords for `nakul@gmail.com` and `thapa@gmail.com` are wrong. This is the real problem.
+2. **"Failed to fetch"** — This is a transient preview network issue that occurs intermittently. The error handling code already covers this.
 
-## What's Already Working
+### Confirmed Users in Database
+| Email | Username | User ID |
+|---|---|---|
+| nakul@gmail.com | Nakul_YT | d8ca1db9-... |
+| thapa@gmail.com | Thapa | 16499de5-... |
+| thapayt@gmail.com | Thapayt | 3882a161-... |
+| xadeve7941@coswz.com | Nakul | 0968a4e3-... |
 
-The code already has proper `try/catch` error handling (added in the last edit) that catches "Failed to fetch" and shows a user-friendly "Network error" toast. No code changes are needed.
+## Plan
 
-## Recommended Actions
+### 1. Create a temporary edge function to reset passwords
+Create `supabase/functions/admin-reset-passwords/index.ts` that uses the Supabase Admin API (service role key) to update passwords for the three accounts:
+- `nakul@gmail.com` → password: `nakul@1234`
+- `thapa@gmail.com` → password: `nakul@1234`
+- `thapayt@gmail.com` (Dev chats / nakul99) → password: `nakul99`
 
-1. **Retry the login** — The backend is currently reachable (I just queried it successfully). Try logging in again with `nakul@gmail.com` or `thapa@gmail.com` in the preview. The transient network issue may have resolved.
+### 2. Deploy and invoke the edge function
+Call the function once to reset all three passwords.
 
-2. **If it still fails**, try refreshing the preview page or publishing the app and testing on the published URL: `https://nakul-chatapp.lovable.app`
+### 3. Delete the edge function
+Remove the temporary function immediately after use — it should not remain deployed.
 
-## Existing User Accounts
+### 4. Verify login works
+Test login with `nakul@gmail.com` / `nakul@1234` to confirm the fix.
 
-These accounts are confirmed to exist in the database:
-- `nakul@gmail.com`
-- `thapa@gmail.com`
-- `xadeve7941@coswz.com`
-
-No data has been lost. The login functionality code is correct — this is a temporary network issue.
+No changes to `Auth.tsx` or `useAuth.tsx` are needed — the login code is correct and the error handling is already in place.
 
