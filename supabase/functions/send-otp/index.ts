@@ -1,19 +1,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.91.0";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
-
-interface SendOtpRequest {
-  phone_number: string;
-}
-
-const MAX_USER_OTP_PER_HOUR = 5;
-const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
+import { getCorsHeaders } from "../_shared/cors.ts";
 
 Deno.serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
