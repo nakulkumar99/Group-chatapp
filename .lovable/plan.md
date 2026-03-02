@@ -1,26 +1,22 @@
 
 
-## Plan: Fix Voice Message Functionality
+## Plan: Fix Group Password Internal Server Error
 
 ### Root Cause
 
-Two issues prevent voice messages from working:
+The `deno.land/x/bcrypt@v0.4.1` library uses **worker threads** internally for its async methods (`bcrypt.hash()` and `bcrypt.compare()`). Supabase Edge Functions run in a restricted Deno environment that does not support spawning workers, causing these calls to throw an unhandled error — which the outer `try/catch` returns as "Internal server error".
 
-1. **File type validation mismatch**: `MediaRecorder` produces MIME types with codec parameters (e.g., `audio/webm;codecs=opus`), but `useFileUpload.ts` uses exact string matching (`allowedTypes.includes(file.type)`), so the check fails and shows "File type not supported".
-
-2. **Broken user gesture chain**: `VoiceRecorder.tsx` calls `startRecording()` inside a `useEffect`, which breaks the browser's requirement that `getUserMedia` is triggered directly by a user gesture. This causes microphone access to be silently denied in many browsers.
+Additionally, the `set-group-password` function enforces a minimum password length of 8 characters, but `CreateGroupModal.tsx` allows passwords as short as 1 character (only checks `password.trim()` is non-empty). The password field also has `maxLength={50}`, which is fine.
 
 ### Changes
 
-#### 1. Fix file type validation in `src/hooks/useFileUpload.ts`
-- Change the type check from exact match (`allowedTypes.includes(file.type)`) to a prefix-based check that strips codec parameters before comparison.
-- Example: `file.type.split(';')[0]` will turn `"audio/webm;codecs=opus"` into `"audio/webm"`, which matches the allowed list.
+#### 1. Fix bcrypt in `supabase/functions/set-group-password/index.ts`
+- Replace `await bcrypt.hash(password)` with `bcrypt.hashSync(password)`.
+- The synchronous version does not use workers and works in Edge Functions.
 
-#### 2. Fix user gesture handling in `src/components/VoiceRecorder.tsx`
-- Remove the `useEffect` that calls `startRecording()` on mount.
-- Instead, call `startRecording()` directly when the user clicks the mic button in `ChatInput.tsx` (before `VoiceRecorder` mounts), or have `VoiceRecorder` auto-start via a ref callback tied to the user gesture chain.
-- Simplest approach: move `startRecording()` call into `ChatInput.tsx`'s mic button click handler, passing the recording state down.
+#### 2. Fix bcrypt in `supabase/functions/join-group-with-password/index.ts`
+- Replace `await bcrypt.compare(password, groupPw.password)` with `bcrypt.compareSync(password, groupPw.password)`.
 
-#### 3. Update `src/components/ChatInput.tsx`
-- Call `startRecording()` directly in the mic button's `onClick` handler to maintain the user gesture chain, then set `isRecording` to `true`.
+#### 3. Fix password length validation in `src/components/CreateGroupModal.tsx`
+- Add minimum password length check (8 characters) to match the edge function's validation, so users get a client-side error instead of a server-side 400.
 
