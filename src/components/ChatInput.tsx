@@ -4,6 +4,7 @@ import { AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useFileUpload } from "@/hooks/useFileUpload";
+import { useVoiceRecorder } from "@/hooks/useVoiceRecorder";
 import { VoiceRecorder, VoiceRecorderButton } from "@/components/VoiceRecorder";
 import { toast } from "sonner";
 
@@ -22,6 +23,12 @@ export function ChatInput({ onSend, onTyping, disabled }: ChatInputProps) {
   const [sendingVoice, setSendingVoice] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { uploadFile, uploading } = useFileUpload();
+  const voiceRecorder = useVoiceRecorder();
+
+  const handleMicClick = async () => {
+    await voiceRecorder.startRecording();
+    setIsRecording(true);
+  };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -165,8 +172,12 @@ export function ChatInput({ onSend, onTyping, disabled }: ChatInputProps) {
           <VoiceRecorder
             key="voice-recorder"
             onRecordingComplete={handleVoiceRecordingComplete}
-            onCancel={() => setIsRecording(false)}
+            onCancel={() => {
+              voiceRecorder.cancelRecording();
+              setIsRecording(false);
+            }}
             isSending={sendingVoice}
+            voiceRecorder={voiceRecorder}
           />
         ) : (
           <form key="text-input" onSubmit={handleSubmit} className="flex gap-2 items-center">
@@ -202,7 +213,7 @@ export function ChatInput({ onSend, onTyping, disabled }: ChatInputProps) {
             {/* Voice Recording Button - show when no text */}
             {!message.trim() && !selectedFile && (
               <VoiceRecorderButton
-                onClick={() => setIsRecording(true)}
+                onClick={handleMicClick}
                 disabled={uploading || sending || disabled}
               />
             )}

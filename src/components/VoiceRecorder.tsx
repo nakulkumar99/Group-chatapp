@@ -1,25 +1,21 @@
-import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { Mic, Square, Trash2, Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useVoiceRecorder } from "@/hooks/useVoiceRecorder";
 
 interface VoiceRecorderProps {
   onRecordingComplete: (blob: Blob) => void;
   onCancel: () => void;
   isSending?: boolean;
+  voiceRecorder: {
+    isRecording: boolean;
+    recordingDuration: number;
+    stopRecording: () => Promise<Blob | null>;
+    cancelRecording: () => void;
+  };
 }
 
-export function VoiceRecorder({ onRecordingComplete, onCancel, isSending = false }: VoiceRecorderProps) {
-  const { isRecording, recordingDuration, startRecording, stopRecording, cancelRecording } =
-    useVoiceRecorder();
-
-  useEffect(() => {
-    startRecording();
-    return () => {
-      cancelRecording();
-    };
-  }, []);
+export function VoiceRecorder({ onRecordingComplete, onCancel, isSending = false, voiceRecorder }: VoiceRecorderProps) {
+  const { isRecording, recordingDuration, stopRecording, cancelRecording } = voiceRecorder;
 
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
