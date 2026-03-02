@@ -47,11 +47,30 @@ Deno.serve(async (req) => {
 
     const { groupId, settings } = await req.json();
 
-    if (!groupId || !settings) {
+    if (!groupId || !settings || typeof settings !== 'object') {
       return new Response(
-        JSON.stringify({ error: "Missing required fields: groupId, settings" }),
+        JSON.stringify({ error: "Missing or invalid required fields" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    const allowedSettings = ['only_admins_can_send', 'only_admins_can_add_members'];
+    const validatedSettings: Record<string, boolean> = {};
+
+    for (const key of Object.keys(settings)) {
+      if (!allowedSettings.includes(key)) {
+        return new Response(
+          JSON.stringify({ error: `Invalid setting: ${key}` }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      if (typeof settings[key] !== 'boolean') {
+        return new Response(
+          JSON.stringify({ error: `Setting ${key} must be a boolean` }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      validatedSettings[key] = settings[key];
     }
 
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -89,7 +108,7 @@ Deno.serve(async (req) => {
     }
 
     const currentSettings = (group.settings as Record<string, unknown>) || {};
-    const newSettings = { ...currentSettings, ...settings };
+    const newSettings = { ...currentSettings, ...validatedSettings };
 
     const { error: updateError } = await supabaseAdmin
       .from("groups")
