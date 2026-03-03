@@ -41,9 +41,15 @@ export function CreateGroupModal({
       return;
     }
 
-    if (hasPassword && !password.trim()) {
-      setErrors({ password: "Password is required when enabled" });
-      return;
+    if (hasPassword) {
+      if (!password.trim()) {
+        setErrors({ password: "Password is required when enabled" });
+        return;
+      }
+      if (password.trim().length < 8) {
+        setErrors({ password: "Password must be at least 8 characters" });
+        return;
+      }
     }
 
     setLoading(true);
