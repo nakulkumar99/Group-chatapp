@@ -390,7 +390,7 @@ export function ChatArea({
             </div>
           ) : (
             <div className="space-y-2">
-              <AnimatePresence mode="popLayout">
+              <AnimatePresence mode="sync">
                 {messages.map((message, index) => {
                   const isOwnMessage = message.user_id === user?.id;
                   const showAvatar =

@@ -1,13 +1,30 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Plus, Settings, Menu, X, MessageCircle, LogOut, User, ShieldCheck } from "lucide-react";
+import { Search, Plus, Settings, Menu, X, MessageCircle, LogOut, User, ShieldCheck, MoreVertical, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAdminRole } from "@/hooks/useAdminRole";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { GroupCard } from "@/components/GroupCard";
 import { CreateGroupModal } from "@/components/CreateGroupModal";
 import { useGroups } from "@/hooks/useGroups";
@@ -33,10 +50,13 @@ export function ContactsSidebar({
 }: ContactsSidebarProps) {
   const navigate = useNavigate();
   const { profile } = useProfile();
-  const { groups, myGroups, loading, createGroup, joinGroup, leaveGroup } = useGroups();
+  const { user } = useAuth();
+  const { groups, myGroups, loading, createGroup, joinGroup, leaveGroup, deleteGroup } = useGroups();
   const { isAdmin: isGlobalAdmin } = useAdminRole();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [deleteGroupId, setDeleteGroupId] = useState<string | null>(null);
+  const [deleteGroupName, setDeleteGroupName] = useState("");
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -202,31 +222,61 @@ export function ContactsSidebar({
             ) : (
               <div className="space-y-1">
                 {filteredMyGroups.map((group) => (
-                  <motion.button
+                  <div
                     key={group.id}
-                    onClick={() => handleGroupSelect(group.id)}
-                    className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all duration-200 text-left ${
+                    className={`w-full flex items-center gap-3 p-3 rounded-xl transition-colors duration-200 text-left ${
                       selectedGroupId === group.id
                         ? "bg-primary/20 border border-primary/30"
                         : "hover:bg-accent/50"
                     }`}
-                    whileHover={{ scale: 1.01 }}
-                    whileTap={{ scale: 0.99 }}
                   >
-                    <Avatar className="w-12 h-12">
-                      <AvatarFallback className="bg-primary text-primary-foreground font-bold">
-                        {getInitials(group.name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-foreground truncate">
-                        {group.name}
-                      </p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {group.description || `${group.member_count || 0} members`}
-                      </p>
-                    </div>
-                  </motion.button>
+                    <button
+                      onClick={() => handleGroupSelect(group.id)}
+                      className="flex items-center gap-3 flex-1 min-w-0"
+                    >
+                      <Avatar className="w-12 h-12">
+                        <AvatarFallback className="bg-primary text-primary-foreground font-bold">
+                          {getInitials(group.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-foreground truncate">
+                          {group.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {group.description || `${group.member_count || 0} members`}
+                        </p>
+                      </div>
+                    </button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 rounded-full hover:bg-accent">
+                          <MoreVertical className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-44 bg-popover">
+                        <DropdownMenuItem
+                          onClick={() => leaveGroup(group.id)}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <LogOut className="w-4 h-4 mr-2" />
+                          Leave group
+                        </DropdownMenuItem>
+                        {group.created_by === user?.id && (
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setDeleteGroupId(group.id);
+                              setDeleteGroupName(group.name);
+                            }}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Delete group
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 ))}
               </div>
             )}
@@ -275,6 +325,30 @@ export function ContactsSidebar({
           />
         )}
       </AnimatePresence>
+
+      {/* Delete Group Confirmation */}
+      <AlertDialog open={!!deleteGroupId} onOpenChange={(open) => { if (!open) setDeleteGroupId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Group</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{deleteGroupName}"? This action cannot be undone. All messages and members will be removed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (deleteGroupId) deleteGroup(deleteGroupId);
+                setDeleteGroupId(null);
+              }}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 
