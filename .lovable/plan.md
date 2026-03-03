@@ -1,22 +1,40 @@
 
 
-## Plan: Fix Group Password Internal Server Error
+## Plan: Mobile View Optimization + Three-Dots Menu for Group Actions
 
-### Root Cause
+### Issues Identified
 
-The `deno.land/x/bcrypt@v0.4.1` library uses **worker threads** internally for its async methods (`bcrypt.hash()` and `bcrypt.compare()`). Supabase Edge Functions run in a restricted Deno environment that does not support spawning workers, causing these calls to throw an unhandled error — which the outer `try/catch` returns as "Internal server error".
+1. **Mobile lag**: Heavy `framer-motion` animations on every message (`initial`, `animate`, `exit` with scale + translate), `whileHover`/`whileTap` on group list items, `backdrop-blur` on multiple layers, and `AnimatePresence mode="popLayout"` on the full message list cause jank on mobile devices.
 
-Additionally, the `set-group-password` function enforces a minimum password length of 8 characters, but `CreateGroupModal.tsx` allows passwords as short as 1 character (only checks `password.trim()` is non-empty). The password field also has `maxLength={50}`, which is fine.
+2. **Three-dots menu missing on sidebar group list**: The `ContactsSidebar` "My Groups" tab has no per-group action menu. Users cannot leave/delete groups from the sidebar. The three-dots menu in `ChatArea` header already correctly shows "Leave group" for all users and "Delete group" only for the owner — but it needs the same in the sidebar.
 
 ### Changes
 
-#### 1. Fix bcrypt in `supabase/functions/set-group-password/index.ts`
-- Replace `await bcrypt.hash(password)` with `bcrypt.hashSync(password)`.
-- The synchronous version does not use workers and works in Edge Functions.
+#### 1. Reduce mobile animation overhead in `MessageBubble.tsx`
+- Remove `scale` from `initial`/`animate`/`exit` transitions (keep only `opacity` and `y`).
+- Reduce transition duration from `0.2` to `0.1`.
+- These are rendered per-message, so the cost multiplies.
 
-#### 2. Fix bcrypt in `supabase/functions/join-group-with-password/index.ts`
-- Replace `await bcrypt.compare(password, groupPw.password)` with `bcrypt.compareSync(password, groupPw.password)`.
+#### 2. Reduce animation overhead in `ChatArea.tsx`
+- Change `AnimatePresence mode="popLayout"` to `mode="sync"` (popLayout forces layout recalculations on every message enter/exit).
 
-#### 3. Fix password length validation in `src/components/CreateGroupModal.tsx`
-- Add minimum password length check (8 characters) to match the edge function's validation, so users get a client-side error instead of a server-side 400.
+#### 3. Reduce animation on group list items in `ContactsSidebar.tsx`
+- Remove `whileHover` and `whileTap` scale transforms from `motion.button` in the My Groups list (lines 205-229). Replace `motion.button` with a plain `button` element.
+
+#### 4. Add three-dots menu to each group in "My Groups" list in `ContactsSidebar.tsx`
+- Add a `MoreVertical` dropdown on each group item in the My Groups tab.
+- Show "Leave group" for all users.
+- Show "Delete group" only if the current user is the group creator (`group.created_by === user?.id`).
+- Add a confirmation `AlertDialog` for delete.
+- Wire up `leaveGroup` and `deleteGroup` from `useGroups`.
+- Import `MoreVertical`, `LogOut`, `Trash2` icons and `DropdownMenu` components.
+- Get current user from `useAuth` (already available via `useProfile` context but need `user.id`).
+
+#### 5. Add three-dots menu to `GroupCard.tsx` (Discover tab)
+- Not needed — the Discover tab already has Join/Leave buttons. The three-dots is only relevant for "My Groups".
+
+### Files Modified
+- `src/components/MessageBubble.tsx` — lighter animations
+- `src/components/layout/ChatArea.tsx` — change AnimatePresence mode
+- `src/components/layout/ContactsSidebar.tsx` — remove hover animations, add three-dots menu with leave/delete
 
