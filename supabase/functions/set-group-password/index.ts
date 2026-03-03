@@ -77,7 +77,7 @@ Deno.serve(async (req) => {
     }
 
     // Hash the password with bcrypt
-    const hashedPassword = await bcrypt.hash(password);
+    const hashedPassword = bcrypt.hashSync(password);
 
     // Upsert the hashed password
     const { error: upsertError } = await serviceClient

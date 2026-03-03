@@ -86,7 +86,7 @@ Deno.serve(async (req) => {
       }
 
       // Compare using bcrypt
-      const isValid = await bcrypt.compare(password, groupPw.password);
+      const isValid = bcrypt.compareSync(password, groupPw.password);
       if (!isValid) {
         return new Response(
           JSON.stringify({ error: "Incorrect password" }),
