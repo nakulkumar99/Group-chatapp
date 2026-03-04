@@ -1,40 +1,40 @@
 
 
-## Plan: Mobile View Optimization + Three-Dots Menu for Group Actions
+## Plan: Super Admin Permanent User Deletion from Admin Panel
 
-### Issues Identified
-
-1. **Mobile lag**: Heavy `framer-motion` animations on every message (`initial`, `animate`, `exit` with scale + translate), `whileHover`/`whileTap` on group list items, `backdrop-blur` on multiple layers, and `AnimatePresence mode="popLayout"` on the full message list cause jank on mobile devices.
-
-2. **Three-dots menu missing on sidebar group list**: The `ContactsSidebar` "My Groups" tab has no per-group action menu. Users cannot leave/delete groups from the sidebar. The three-dots menu in `ChatArea` header already correctly shows "Leave group" for all users and "Delete group" only for the owner — but it needs the same in the sidebar.
+### Problem
+The current "Delete Account" action in the admin panel only soft-deletes users (sets status to "suspended"). There is no permanent deletion capability for admins. The existing `delete-account` edge function only works for self-deletion.
 
 ### Changes
 
-#### 1. Reduce mobile animation overhead in `MessageBubble.tsx`
-- Remove `scale` from `initial`/`animate`/`exit` transitions (keep only `opacity` and `y`).
-- Reduce transition duration from `0.2` to `0.1`.
-- These are rendered per-message, so the cost multiplies.
+#### 1. Create new edge function `supabase/functions/admin-delete-user/index.ts`
+- Accepts `{ target_user_id: string }` in the request body.
+- Validates the caller's JWT and checks that the caller is a `super_admin` by querying the `admin_roles` table with the service role client.
+- Prevents self-deletion (caller cannot delete their own account).
+- Performs cascading deletion of all user data from the same tables as `delete-account` (message_reactions, message_reads, pinned_messages, content_reports, messages, user_roles, group_members, profile_images, profiles, admin_roles, user_bans, user_phone_data, otp_user_rate_limits).
+- Calls `adminClient.auth.admin.deleteUser(target_user_id)` to permanently remove the auth user.
+- Logs the action to `audit_logs`.
 
-#### 2. Reduce animation overhead in `ChatArea.tsx`
-- Change `AnimatePresence mode="popLayout"` to `mode="sync"` (popLayout forces layout recalculations on every message enter/exit).
+#### 2. Add config entry in `supabase/config.toml`
+- Add `[functions.admin-delete-user]` with `verify_jwt = false` (JWT validated in code).
 
-#### 3. Reduce animation on group list items in `ContactsSidebar.tsx`
-- Remove `whileHover` and `whileTap` scale transforms from `motion.button` in the My Groups list (lines 205-229). Replace `motion.button` with a plain `button` element.
+#### 3. Update `useAdminUsers.ts` — `deleteUser` function
+- Replace the soft-delete logic with a call to `supabase.functions.invoke("admin-delete-user", { body: { target_user_id: userId } })`.
+- Return success/error based on the response.
 
-#### 4. Add three-dots menu to each group in "My Groups" list in `ContactsSidebar.tsx`
-- Add a `MoreVertical` dropdown on each group item in the My Groups tab.
-- Show "Leave group" for all users.
-- Show "Delete group" only if the current user is the group creator (`group.created_by === user?.id`).
-- Add a confirmation `AlertDialog` for delete.
-- Wire up `leaveGroup` and `deleteGroup` from `useGroups`.
-- Import `MoreVertical`, `LogOut`, `Trash2` icons and `DropdownMenu` components.
-- Get current user from `useAuth` (already available via `useProfile` context but need `user.id`).
+#### 4. Restrict "Delete Account" to super_admin only in `UserManagement.tsx`
+- Pass the current admin's role to the component (use `useAdminRole`).
+- Only show the "Delete Account" dropdown item when the current user is a `super_admin`.
+- Hide it for `admin` and `moderator` roles.
 
-#### 5. Add three-dots menu to `GroupCard.tsx` (Discover tab)
-- Not needed — the Discover tab already has Join/Leave buttons. The three-dots is only relevant for "My Groups".
+#### 5. Restrict "Delete Account" button in `UserDetailModal.tsx`
+- Accept an `isSuperAdmin` prop.
+- Only render the "Delete Account" button when `isSuperAdmin` is true.
 
 ### Files Modified
-- `src/components/MessageBubble.tsx` — lighter animations
-- `src/components/layout/ChatArea.tsx` — change AnimatePresence mode
-- `src/components/layout/ContactsSidebar.tsx` — remove hover animations, add three-dots menu with leave/delete
+- `supabase/functions/admin-delete-user/index.ts` — new edge function
+- `supabase/config.toml` — add function config
+- `src/hooks/useAdminUsers.ts` — call edge function instead of soft delete
+- `src/components/admin/UserManagement.tsx` — restrict delete to super_admin
+- `src/components/admin/UserDetailModal.tsx` — restrict delete button to super_admin
 
