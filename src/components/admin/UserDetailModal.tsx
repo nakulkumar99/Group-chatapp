@@ -34,6 +34,7 @@ interface UserDetailModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   user: UserData | null;
+  isSuperAdmin: boolean;
   onEdit: () => void;
   onBan: () => void;
   onDelete: () => void;
@@ -44,6 +45,7 @@ export function UserDetailModal({
   open,
   onOpenChange,
   user,
+  isSuperAdmin,
   onEdit,
   onBan,
   onDelete,
@@ -165,10 +167,12 @@ export function UserDetailModal({
                 <Ban className="h-4 w-4 mr-2" />
                 {user.isBanned ? "Unban User" : "Ban User"}
               </Button>
-              <Button variant="destructive" size="sm" onClick={onDelete}>
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete Account
-              </Button>
+              {isSuperAdmin && (
+                <Button variant="destructive" size="sm" onClick={onDelete}>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Account
+                </Button>
+              )}
             </div>
           </TabsContent>
 
