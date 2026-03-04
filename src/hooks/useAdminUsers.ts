@@ -327,24 +327,17 @@ export function useAdminUsers() {
       if (!user) return { success: false, message: "Not authenticated" };
 
       try {
-        // Note: Full account deletion requires server-side implementation
-        // For now, we mark the user as suspended
-        const { error } = await supabase
-          .from("profiles")
-          .update({ status: "suspended" })
-          .eq("user_id", userId);
+        const { data, error } = await supabase.functions.invoke("admin-delete-user", {
+          body: { target_user_id: userId },
+        });
 
         if (error) throw error;
 
-        await supabase.from("audit_logs").insert({
-          admin_id: user.id,
-          action: "delete_user",
-          target_type: "user",
-          target_id: userId,
-          details: { soft_delete: true } as Json,
-        });
+        if (data?.error) {
+          return { success: false, message: data.error };
+        }
 
-        return { success: true, message: "User account suspended" };
+        return { success: true, message: "User account permanently deleted" };
       } catch (error) {
         console.error("Error deleting user:", error);
         return { success: false, message: "Failed to delete user" };

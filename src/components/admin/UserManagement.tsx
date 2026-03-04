@@ -41,6 +41,7 @@ import {
   Eye,
 } from "lucide-react";
 import { useAdminUsers, type UserWithStatus } from "@/hooks/useAdminUsers";
+import { useAdminRole } from "@/hooks/useAdminRole";
 import { usePhoneAuth } from "@/hooks/usePhoneAuth";
 import { useToast } from "@/hooks/use-toast";
 import { BanUserModal } from "./BanUserModal";
@@ -69,6 +70,7 @@ export function UserManagement() {
     loading,
   } = useAdminUsers();
   const { sendOTP } = usePhoneAuth();
+  const { isSuperAdmin } = useAdminRole();
   const { toast } = useToast();
 
   const [users, setUsers] = useState<UserWithStatus[]>([]);
@@ -465,17 +467,21 @@ export function UserManagement() {
                             Ban User
                           </DropdownMenuItem>
                         )}
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-destructive"
-                          onClick={() => {
-                            setSelectedUser(user);
-                            setDeleteModalOpen(true);
-                          }}
-                        >
-                          <UserX className="mr-2 h-4 w-4" />
-                          Delete Account
-                        </DropdownMenuItem>
+                        {isSuperAdmin && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              onClick={() => {
+                                setSelectedUser(user);
+                                setDeleteModalOpen(true);
+                              }}
+                            >
+                              <UserX className="mr-2 h-4 w-4" />
+                              Delete Account
+                            </DropdownMenuItem>
+                          </>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -534,13 +540,14 @@ export function UserManagement() {
         onOpenChange={setDeleteModalOpen}
         onConfirm={handleDelete}
         title="Delete Account"
-        description={`Are you sure you want to delete ${selectedUser?.username}'s account? This action will suspend the account.`}
+        description={`Are you sure you want to permanently delete ${selectedUser?.username}'s account? This action cannot be undone.`}
       />
 
       <UserDetailModal
         open={detailModalOpen}
         onOpenChange={setDetailModalOpen}
         user={selectedUser}
+        isSuperAdmin={isSuperAdmin}
         onEdit={() => {
           setDetailModalOpen(false);
           setEditModalOpen(true);
