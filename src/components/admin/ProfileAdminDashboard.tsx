@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -6,6 +7,7 @@ import {
   Users,
   Menu,
   X,
+  ArrowLeft,
 } from "lucide-react";
 import { AdminDashboard } from "./AdminDashboard";
 import { UserManagement } from "./UserManagement";
@@ -37,6 +39,7 @@ function NavItem({ icon, label, active, onClick }: NavItemProps) {
 }
 
 export function ProfileAdminDashboard() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -58,15 +61,23 @@ export function ProfileAdminDashboard() {
 
   return (
     <div className="flex h-[calc(100vh-3rem)]">
-      {/* Mobile sidebar toggle */}
-      <Button
-        variant="ghost"
-        size="icon"
-        className="fixed top-4 left-4 z-50 md:hidden"
-        onClick={() => setSidebarOpen(!sidebarOpen)}
-      >
-        {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-      </Button>
+      {/* Mobile top bar */}
+      <div className="fixed top-4 left-4 z-50 flex items-center gap-1 md:hidden">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => navigate("/")}
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+        >
+          {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        </Button>
+      </div>
 
       {/* Sidebar overlay for mobile */}
       {sidebarOpen && (
@@ -85,6 +96,17 @@ export function ProfileAdminDashboard() {
       >
         <div className="flex flex-col h-full p-4">
           <div className="mb-8 pt-12 md:pt-0">
+            <div className="hidden md:flex items-center gap-2 mb-4">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate("/")}
+                className="rounded-full"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <span className="text-sm text-muted-foreground">Back to Home</span>
+            </div>
             <h2 className="text-xl font-bold text-foreground">Admin Panel</h2>
             <p className="text-sm text-muted-foreground">Manage your platform</p>
           </div>

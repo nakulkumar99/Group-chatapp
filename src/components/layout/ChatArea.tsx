@@ -11,6 +11,7 @@ import {
   MessageCircle,
   ShieldAlert,
   ShieldCheck,
+  ArrowLeft,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -261,14 +262,23 @@ export function ChatArea({
       <header className="sticky top-0 z-20 bg-card/90 backdrop-blur-xl border-b border-border">
         <div className="px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {isMobile && (
+            {isMobile ? (
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={onOpenSidebar}
+                onClick={() => navigate("/")}
                 className="hover:bg-accent rounded-full"
               >
-                <Menu className="w-5 h-5" />
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+            ) : (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate("/")}
+                className="hover:bg-accent rounded-full"
+              >
+                <ArrowLeft className="w-5 h-5" />
               </Button>
             )}
             <Avatar className="w-10 h-10 border-2 border-primary/30">
