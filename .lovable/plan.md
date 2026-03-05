@@ -1,20 +1,20 @@
 
 
-## Plan: Fix Super Admin Permanent Delete Not Working
+## Plan: Add Back Buttons to Admin Panel and Chat Group Header
 
-### Problem
-The `admin-delete-user` edge function uses `userClient.auth.getClaims(token)` which is not a valid method in supabase-js v2. This causes the function to fail silently, so delete does nothing (user stays showing as "suspended" instead of being permanently removed).
+### Changes
 
-### Fix
+#### 1. `src/components/admin/ProfileAdminDashboard.tsx`
+- Add a back button (ArrowLeft icon) in the sidebar header area that navigates to `/` (home page).
+- On mobile, add the back button next to the existing menu toggle button so it's always visible.
+- Import `useNavigate` from react-router-dom and `ArrowLeft` from lucide-react.
 
-#### 1. Fix `supabase/functions/admin-delete-user/index.ts`
-- Replace `userClient.auth.getClaims(token)` with `userClient.auth.getUser()` (the standard pattern used by all other edge functions in this project).
-- Extract `callerId` from `userData.user.id` instead of `claimsData.claims.sub`.
-
-#### 2. Fix `supabase/functions/delete-account/index.ts`
-- Same issue: replace `getClaims` with `getUser()` for consistency and correctness.
+#### 2. `src/components/layout/ChatArea.tsx`
+- Add a back button (ArrowLeft icon) in the chat header, before the group avatar, that navigates to `/` (home/groups list).
+- On desktop: show the back button always.
+- On mobile: replace the existing Menu hamburger button with an ArrowLeft back button that navigates to `/` instead of opening the sidebar.
 
 ### Files Modified
-- `supabase/functions/admin-delete-user/index.ts`
-- `supabase/functions/delete-account/index.ts`
+- `src/components/admin/ProfileAdminDashboard.tsx`
+- `src/components/layout/ChatArea.tsx`
 
