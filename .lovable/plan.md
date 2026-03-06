@@ -1,20 +1,20 @@
 
+## Security Re-Scan Results
 
-## Plan: Add Back Buttons to Admin Panel and Chat Group Header
+### Warn-Level Issues Status
+✓ **All warn-level issues are resolved:**
+- `otp_plaintext_code` - RESOLVED (hashed OTP implementation)
+- `group_member_overexposure` - RESOLVED (RLS policy tightened)
+- `SUPA_auth_leaked_password_protection` - IGNORED (platform-level configuration, user decision)
 
-### Changes
+**Current Finding:** One remaining warn-level issue detected:
+- `SUPA_auth_leaked_password_protection` - Password breach detection is disabled in Supabase auth settings (platform-level configuration outside application scope)
 
-#### 1. `src/components/admin/ProfileAdminDashboard.tsx`
-- Add a back button (ArrowLeft icon) in the sidebar header area that navigates to `/` (home page).
-- On mobile, add the back button next to the existing menu toggle button so it's always visible.
-- Import `useNavigate` from react-router-dom and `ArrowLeft` from lucide-react.
+### Error-Level Issues Identified
+The scan also detected 3 new error-level issues:
+1. **PUBLIC_GROUP_DATA** - Groups table allows any authenticated user to view all group information
+2. **PUBLIC_PROFILE_IMAGES** - Profile images are visible to all authenticated users
+3. **MISSING_RLS_PROTECTION** - User roles table has overly permissive admin policy allowing cross-group role assignment
 
-#### 2. `src/components/layout/ChatArea.tsx`
-- Add a back button (ArrowLeft icon) in the chat header, before the group avatar, that navigates to `/` (home/groups list).
-- On desktop: show the back button always.
-- On mobile: replace the existing Menu hamburger button with an ArrowLeft back button that navigates to `/` instead of opening the sidebar.
-
-### Files Modified
-- `src/components/admin/ProfileAdminDashboard.tsx`
-- `src/components/layout/ChatArea.tsx`
-
+### Recommendation
+The warn-level issues are functionally resolved. However, the 3 error-level issues pose security risks and should be addressed in a separate task focused on fixing error-level vulnerabilities.
