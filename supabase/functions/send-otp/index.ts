@@ -2,6 +2,13 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.91.0";
 
 import { getCorsHeaders } from "../_shared/cors.ts";
 
+async function hashOtp(otp: string): Promise<string> {
+  const data = new TextEncoder().encode(otp);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 Deno.serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
   if (req.method === "OPTIONS") {
@@ -95,11 +102,12 @@ Deno.serve(async (req) => {
     }
 
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpHash = await hashOtp(otpCode);
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
 
     const { error: insertError } = await supabase.from("otp_verifications").insert({
       phone_number,
-      otp_code: otpCode,
+      otp_code: otpHash,
       expires_at: expiresAt,
       verified: false,
     });

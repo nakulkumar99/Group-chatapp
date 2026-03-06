@@ -2,6 +2,13 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.91.0";
 
 import { getCorsHeaders } from "../_shared/cors.ts";
 
+async function hashOtp(otp: string): Promise<string> {
+  const data = new TextEncoder().encode(otp);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 Deno.serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
   if (req.method === "OPTIONS") {
@@ -73,12 +80,13 @@ Deno.serve(async (req) => {
       );
     }
 
+    const otpHash = await hashOtp(otp_code);
     const now = new Date().toISOString();
     const { data: validOtp, error: otpError } = await supabase
       .from("otp_verifications")
       .select("id")
       .eq("phone_number", phone_number)
-      .eq("otp_code", otp_code)
+      .eq("otp_code", otpHash)
       .eq("verified", false)
       .gt("expires_at", now)
       .order("created_at", { ascending: false })
@@ -117,6 +125,14 @@ Deno.serve(async (req) => {
       .eq("phone_number", phone_number)
       .eq("verified", true)
       .neq("id", validOtp.id);
+
+    // Clean up expired unverified OTPs
+    await supabase
+      .from("otp_verifications")
+      .delete()
+      .eq("phone_number", phone_number)
+      .eq("verified", false)
+      .lt("expires_at", now);
 
     return new Response(
       JSON.stringify({ success: true, message: "Phone number verified successfully" }),
