@@ -100,6 +100,7 @@ export function ChatArea({
 
   const [group, setGroup] = useState<GroupInfo | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
