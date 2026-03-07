@@ -57,6 +57,7 @@ interface GroupInfo {
   name: string;
   description: string | null;
   created_by: string;
+  has_password: boolean;
 }
 
 interface ChatAreaProps {
