@@ -471,6 +471,15 @@ export function ChatArea({
         </div>
       </div>
 
+      {/* Reset Group Password Modal */}
+      {groupId && (
+        <ResetGroupPasswordModal
+          open={showResetPasswordModal}
+          onOpenChange={setShowResetPasswordModal}
+          groupId={groupId}
+        />
+      )}
+
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
