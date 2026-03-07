@@ -12,6 +12,7 @@ import {
   ShieldAlert,
   ShieldCheck,
   ArrowLeft,
+  KeyRound,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
