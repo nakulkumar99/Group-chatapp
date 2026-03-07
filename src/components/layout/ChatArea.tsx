@@ -12,6 +12,7 @@ import {
   ShieldAlert,
   ShieldCheck,
   ArrowLeft,
+  KeyRound,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -47,6 +48,7 @@ import { MessageBubble } from "@/components/MessageBubble";
 import { ChatInput } from "@/components/ChatInput";
 import { PinnedMessagesBar } from "@/components/PinnedMessagesBar";
 import { ScrollToBottomButton } from "@/components/ScrollToBottomButton";
+import { ResetGroupPasswordModal } from "@/components/ResetGroupPasswordModal";
 import { useThemeContext } from "./ThemeProvider";
 import { toast } from "sonner";
 
@@ -55,6 +57,7 @@ interface GroupInfo {
   name: string;
   description: string | null;
   created_by: string;
+  has_password: boolean;
 }
 
 interface ChatAreaProps {
@@ -97,6 +100,7 @@ export function ChatArea({
 
   const [group, setGroup] = useState<GroupInfo | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
@@ -302,6 +306,17 @@ export function ChatArea({
           </div>
 
           <div className="flex items-center gap-1">
+            {isAdmin && group.has_password && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowResetPasswordModal(true)}
+                className="hover:bg-accent rounded-full text-primary"
+                title="Reset Group Password"
+              >
+                <KeyRound className="w-5 h-5" />
+              </Button>
+            )}
             {isAdmin && (
               <Button
                 variant="ghost"
@@ -455,6 +470,15 @@ export function ChatArea({
           )}
         </div>
       </div>
+
+      {/* Reset Group Password Modal */}
+      {groupId && (
+        <ResetGroupPasswordModal
+          open={showResetPasswordModal}
+          onOpenChange={setShowResetPasswordModal}
+          groupId={groupId}
+        />
+      )}
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>

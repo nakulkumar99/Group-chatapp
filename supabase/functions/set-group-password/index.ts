@@ -69,11 +69,22 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Allow group creator or group admins
     if (group.created_by !== user.id) {
-      return new Response(
-        JSON.stringify({ error: "Only the group creator can set a password" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      const { data: adminRole } = await serviceClient
+        .from("user_roles")
+        .select("id")
+        .eq("group_id", group_id)
+        .eq("user_id", user.id)
+        .eq("role", "admin")
+        .maybeSingle();
+
+      if (!adminRole) {
+        return new Response(
+          JSON.stringify({ error: "Only group admins can reset the password" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     // Hash the password with bcrypt
