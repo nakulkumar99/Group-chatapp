@@ -48,6 +48,7 @@ import { MessageBubble } from "@/components/MessageBubble";
 import { ChatInput } from "@/components/ChatInput";
 import { PinnedMessagesBar } from "@/components/PinnedMessagesBar";
 import { ScrollToBottomButton } from "@/components/ScrollToBottomButton";
+import { ResetGroupPasswordModal } from "@/components/ResetGroupPasswordModal";
 import { useThemeContext } from "./ThemeProvider";
 import { toast } from "sonner";
 
