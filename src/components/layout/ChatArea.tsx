@@ -306,6 +306,17 @@ export function ChatArea({
           </div>
 
           <div className="flex items-center gap-1">
+            {isAdmin && group.has_password && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowResetPasswordModal(true)}
+                className="hover:bg-accent rounded-full text-primary"
+                title="Reset Group Password"
+              >
+                <KeyRound className="w-5 h-5" />
+              </Button>
+            )}
             {isAdmin && (
               <Button
                 variant="ghost"
