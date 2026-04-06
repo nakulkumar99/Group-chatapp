@@ -1,6 +1,6 @@
 import { forwardRef, useState } from "react";
 import { motion } from "framer-motion";
-import { Users, UserPlus, UserMinus, Check, Lock, Loader2 } from "lucide-react";
+import { Users, UserPlus, UserMinus, Check, Lock, Loader2, KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -11,6 +11,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { ResetGroupPasswordModal } from "@/components/ResetGroupPasswordModal";
 
 interface GroupCardProps {
   id: string;
@@ -22,6 +23,7 @@ interface GroupCardProps {
   onJoin: (id: string, password?: string) => Promise<{ error: unknown }>;
   onLeave: (id: string) => void;
   onOpen: (id: string) => void;
+  isSuperAdmin?: boolean;
 }
 
 export const GroupCard = forwardRef<HTMLDivElement, GroupCardProps>(function GroupCard({
@@ -34,11 +36,13 @@ export const GroupCard = forwardRef<HTMLDivElement, GroupCardProps>(function Gro
   onJoin,
   onLeave,
   onOpen,
+  isSuperAdmin = false,
 }, ref) {
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [password, setPassword] = useState("");
   const [joining, setJoining] = useState(false);
   const [passwordError, setPasswordError] = useState("");
+  const [showResetModal, setShowResetModal] = useState(false);
 
   const getInitials = (text: string) => {
     return text
@@ -118,6 +122,17 @@ export const GroupCard = forwardRef<HTMLDivElement, GroupCardProps>(function Gro
               
               {isMember ? (
                 <div className="flex items-center gap-2">
+                  {isSuperAdmin && hasPassword && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowResetModal(true)}
+                      className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                      title="Reset group password"
+                    >
+                      <KeyRound className="w-3.5 h-3.5" />
+                    </Button>
+                  )}
                   <span className="text-xs text-[hsl(149,67%,45%)] flex items-center gap-1">
                     <Check className="w-3.5 h-3.5" />
                     Joined
@@ -187,6 +202,12 @@ export const GroupCard = forwardRef<HTMLDivElement, GroupCardProps>(function Gro
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ResetGroupPasswordModal
+        open={showResetModal}
+        onOpenChange={setShowResetModal}
+        groupId={id}
+      />
     </>
   );
 });

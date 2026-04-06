@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useGroups } from "@/hooks/useGroups";
 import { useProfile } from "@/hooks/useProfile";
+import { useAdminRole } from "@/hooks/useAdminRole";
 import { GroupCard } from "@/components/GroupCard";
 import { CreateGroupModal } from "@/components/CreateGroupModal";
 import { QuickAvatarUploader } from "@/components/QuickAvatarUploader";
@@ -19,6 +20,7 @@ export default function Index() {
   const { user, loading: authLoading } = useAuth();
   const { profile, updateProfile } = useProfile();
   const { groups, myGroups, loading: groupsLoading, createGroup, joinGroup, leaveGroup } = useGroups();
+  const { isSuperAdmin } = useAdminRole();
   const [showAvatarUploader, setShowAvatarUploader] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -144,6 +146,7 @@ export default function Index() {
                       onJoin={joinGroup}
                       onLeave={leaveGroup}
                       onOpen={(id) => navigate(`/chat/${id}`)}
+                      isSuperAdmin={isSuperAdmin}
                     />
                   ))}
                 </AnimatePresence>
@@ -171,6 +174,7 @@ export default function Index() {
                       onJoin={joinGroup}
                       onLeave={leaveGroup}
                       onOpen={(id) => navigate(`/chat/${id}`)}
+                      isSuperAdmin={isSuperAdmin}
                     />
                   ))}
                 </AnimatePresence>
