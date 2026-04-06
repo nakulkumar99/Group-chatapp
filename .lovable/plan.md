@@ -1,20 +1,23 @@
 
 
-## Plan: Add Back Buttons to Admin Panel and Chat Group Header
+## Plan: Add Password Reset Key Icon to GroupCard for Super Admins
 
 ### Changes
 
-#### 1. `src/components/admin/ProfileAdminDashboard.tsx`
-- Add a back button (ArrowLeft icon) in the sidebar header area that navigates to `/` (home page).
-- On mobile, add the back button next to the existing menu toggle button so it's always visible.
-- Import `useNavigate` from react-router-dom and `ArrowLeft` from lucide-react.
+#### 1. Update `src/components/GroupCard.tsx`
+- Add `isSuperAdmin` and `groupId` props (groupId already exists as `id`).
+- Import `KeyRound` from lucide-react.
+- Import `ResetGroupPasswordModal`.
+- Add state for the reset password modal.
+- When `isSuperAdmin` is true and `hasPassword` is true, render a `KeyRound` icon button next to the group actions area (right side).
+- Clicking the icon opens the `ResetGroupPasswordModal` with the group's ID.
+- The icon is only visible to super admins; other users see no change.
 
-#### 2. `src/components/layout/ChatArea.tsx`
-- Add a back button (ArrowLeft icon) in the chat header, before the group avatar, that navigates to `/` (home/groups list).
-- On desktop: show the back button always.
-- On mobile: replace the existing Menu hamburger button with an ArrowLeft back button that navigates to `/` instead of opening the sidebar.
+#### 2. Update `src/pages/Index.tsx`
+- Import and use `useAdminRole` hook.
+- Pass `isSuperAdmin` prop to each `GroupCard` instance in both "My Groups" and "Discover" tabs.
 
 ### Files Modified
-- `src/components/admin/ProfileAdminDashboard.tsx`
-- `src/components/layout/ChatArea.tsx`
+- `src/components/GroupCard.tsx`
+- `src/pages/Index.tsx`
 
