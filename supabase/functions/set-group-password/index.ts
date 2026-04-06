@@ -69,21 +69,30 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Allow group creator or group admins
+    // Allow group creator, super admins, or group-level admins
     if (group.created_by !== user.id) {
-      const { data: adminRole } = await serviceClient
-        .from("user_roles")
+      const { data: superAdmin } = await serviceClient
+        .from("admin_roles")
         .select("id")
-        .eq("group_id", group_id)
         .eq("user_id", user.id)
-        .eq("role", "admin")
+        .eq("role", "super_admin")
         .maybeSingle();
 
-      if (!adminRole) {
-        return new Response(
-          JSON.stringify({ error: "Only group admins can reset the password" }),
-          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+      if (!superAdmin) {
+        const { data: groupAdmin } = await serviceClient
+          .from("user_roles")
+          .select("id")
+          .eq("group_id", group_id)
+          .eq("user_id", user.id)
+          .eq("role", "admin")
+          .maybeSingle();
+
+        if (!groupAdmin) {
+          return new Response(
+            JSON.stringify({ error: "Only group admins can reset the password" }),
+            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
       }
     }
 
