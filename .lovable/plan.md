@@ -1,45 +1,54 @@
 
 
-## Plan: Resolve All Security Scan Findings
+## Plan: Fix Key Icon Visibility, Clean Stale Finding, Enable HIBP
 
-### Current State Analysis
+### Problem Analysis
 
-After verifying the actual database policies, most error-level findings are **already fixed** but appear as stale entries in the scanner. Here's the true status:
+1. **Key icon not visible**: The "DEV Chats" group has `has_password: true` and the super admin exists, but the group has **zero members**. The key icon in `GroupCard.tsx` is rendered inside the `isMember` conditional block (line 123), so it never appears for non-members — including super admins.
 
-| Finding | Level | Actual Status |
-|---------|-------|---------------|
-| Message UPDATE group injection | error | **Already fixed** — WITH CHECK uses `is_member_of_group()` |
-| Realtime channel authorization | error | **Cannot fix** — `realtime` is a reserved Supabase schema |
-| Plaintext group passwords | error | **Already fixed** — bcrypt hashing in edge functions |
-| Admin role self-escalation | error | **Already fixed** — WITH CHECK prevents non-super-admin escalation |
-| Groups visible to all users | warn | **Intentional** — app has "Discover" tab for group browsing |
-| Missing storage UPDATE policy | warn | **Needs fix** — no UPDATE policy on chat-attachments |
-| Leaked Password Protection | warn | **Manual action** — platform-level setting |
-| Group enumeration | warn | **Intentional** — same as groups visibility (Discover feature) |
+2. **"Group passwords stored in plaintext" finding**: This is a stale scanner entry. Passwords are already hashed via bcrypt in the `set-group-password` and `join-group-with-password` edge functions. The finding needs to be deleted.
+
+3. **Leaked Password Protection (HIBP)**: This is a platform-level toggle. You need to manually enable it: go to **Cloud → Users → Auth Settings (gear icon) → Email settings → activate Password HIBP Check**.
 
 ### Changes
 
-#### 1. Database Migration: Add UPDATE policy for chat-attachments storage bucket
-- Add an owner-scoped UPDATE policy so file owners can update their own attachments:
-```sql
-CREATE POLICY "File owners can update chat attachments"
-ON storage.objects FOR UPDATE
-USING (bucket_id = 'chat-attachments' AND auth.uid()::text = (storage.foldername(name))[1]);
+#### 1. Update `src/components/GroupCard.tsx`
+Move the key icon button outside the `isMember` conditional so super admins can see and use it on any password-protected group, whether they are a member or not.
+
+Current structure:
+```
+{isMember ? (
+  <div>
+    {isSuperAdmin && hasPassword && <KeyRound button />}
+    <Joined badge>
+    <Leave button>
+  </div>
+) : (
+  <Join button>
+)}
 ```
 
-#### 2. Clean Up Stale/Resolved Security Findings
-- **Delete** `msg_update_group_inject` — verified fixed in DB
-- **Delete** `plaintext_group_pass` — verified bcrypt is used
-- **Delete** `user_roles_admin_escalation` — verified WITH CHECK prevents escalation
-- **Ignore** `groups_table_all_authenticated` — intentional for Discover tab
-- **Ignore** `groups_all_authenticated_enumerate` — intentional for Discover tab
-- **Ignore** `chat_attachments_missing_update_policy` — after adding the policy, delete this finding
-- **Ignore** `SUPA_auth_leaked_password_protection` — requires manual dashboard toggle (Cloud → Users → Auth Settings → Email → Password HIBP Check)
+New structure:
+```
+<div className="flex items-center gap-2">
+  {isSuperAdmin && hasPassword && <KeyRound button />}
+  {isMember ? (
+    <>
+      <Joined badge>
+      <Leave button>
+    </>
+  ) : (
+    <Join button>
+  )}
+</div>
+```
+
+#### 2. Delete stale security finding
+Delete `plaintext_group_pass` — already resolved via bcrypt hashing in edge functions.
+
+#### 3. Manual action: Enable HIBP
+Navigate to **Cloud → Users → Auth Settings → Email → Password HIBP Check** and activate it.
 
 ### Files Modified
-- 1 new database migration (storage UPDATE policy)
-- Security finding management (cleanup stale entries)
-
-### Manual Action Required
-Enable **Leaked Password Protection** in Cloud → Users → Auth Settings → Email settings → activate the Password HIBP Check switch.
+- `src/components/GroupCard.tsx` (move key icon outside membership check)
 
