@@ -120,44 +120,46 @@ export const GroupCard = forwardRef<HTMLDivElement, GroupCardProps>(function Gro
                 <span>Group chat</span>
               </div>
               
-              {isMember ? (
-                <div className="flex items-center gap-2">
-                  {isSuperAdmin && hasPassword && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowResetModal(true)}
-                      className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
-                      title="Reset group password"
-                    >
-                      <KeyRound className="w-3.5 h-3.5" />
-                    </Button>
-                  )}
-                  <span className="text-xs text-[hsl(149,67%,45%)] flex items-center gap-1">
-                    <Check className="w-3.5 h-3.5" />
-                    Joined
-                  </span>
+              <div className="flex items-center gap-2">
+                {isSuperAdmin && hasPassword && (
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => onLeave(id)}
-                    className="h-7 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={() => setShowResetModal(true)}
+                    className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                    title="Reset group password"
                   >
-                    <UserMinus className="w-3.5 h-3.5 mr-1" />
-                    Leave
+                    <KeyRound className="w-3.5 h-3.5" />
                   </Button>
-                </div>
-              ) : (
-                <Button
-                  size="sm"
-                  onClick={handleJoinClick}
-                  className="h-7 text-xs bg-[hsl(149,67%,38%)] hover:bg-[hsl(149,67%,33%)] rounded-full"
-                >
-                  {hasPassword && <Lock className="w-3 h-3 mr-1" />}
-                  <UserPlus className="w-3.5 h-3.5 mr-1" />
-                  Join
-                </Button>
-              )}
+                )}
+                {isMember ? (
+                  <>
+                    <span className="text-xs text-[hsl(149,67%,45%)] flex items-center gap-1">
+                      <Check className="w-3.5 h-3.5" />
+                      Joined
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onLeave(id)}
+                      className="h-7 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                    >
+                      <UserMinus className="w-3.5 h-3.5 mr-1" />
+                      Leave
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    size="sm"
+                    onClick={handleJoinClick}
+                    className="h-7 text-xs bg-[hsl(149,67%,38%)] hover:bg-[hsl(149,67%,33%)] rounded-full"
+                  >
+                    {hasPassword && <Lock className="w-3 h-3 mr-1" />}
+                    <UserPlus className="w-3.5 h-3.5 mr-1" />
+                    Join
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </div>
