@@ -1,36 +1,32 @@
 
 
-## Plan: Trigger Rebuild to Deploy Key Icon Fix + Verify Security
+## Plan: Fix Infinite Re-render Loop and Unhandled Fetch Error
 
-### Problem
-The `GroupCard.tsx` source code is correct — the `KeyRound` icon renders when `isSuperAdmin && hasPassword`. Both conditions are verified true in the database. However, the preview DOM does not contain the button, indicating the latest code has not been deployed/built.
+### Problem 1: Maximum Update Depth Exceeded
+The `useReadReceipts` hook has a dependency cycle:
+- `markAllAsRead` depends on `readReceipts` (line 104) and `messageIds` (line 100)
+- `ChatArea` calls `markAllAsRead` inside `useLayoutEffect` with `markAllAsRead` as a dependency (line 168)
+- When `markAllAsRead` changes reference (due to `readReceipts` changing), `useLayoutEffect` fires again, which can trigger state updates, causing infinite loops
 
-### Root Cause
-The GroupCard code was updated in the last session but the preview may be serving a cached/stale build. A no-op change will trigger a rebuild.
+**Fix in `src/hooks/useReadReceipts.ts`**:
+- Use `useRef` to hold `readReceipts` and `messageIds` so `markAllAsRead` and `markAsRead` callbacks have stable references
+- Remove `readReceipts` from the dependency array of `markAsRead` and `markAllAsRead` by reading from refs instead
 
-### Changes
+**Fix in `src/components/layout/ChatArea.tsx`**:
+- Remove `markAllAsRead` from the `useLayoutEffect` dependency array (line 168) to prevent re-triggering on every state change
 
-#### 1. Touch `src/components/GroupCard.tsx` to trigger rebuild
-Add a harmless comment at the top of the file to force a new build:
-```tsx
-// GroupCard — password-reset key icon for super admins
-```
+### Problem 2: Unhandled Promise Rejection in joinGroup
+The `joinGroup` function in `src/hooks/useGroups.ts` (line 131) uses raw `fetch()` without try/catch. Network failures cause unhandled promise rejections.
 
-No logic changes needed — the code is already correct.
+**Fix in `src/hooks/useGroups.ts`**:
+- Wrap the `fetch` call in a try/catch block
+- Return `{ error }` on network failure instead of throwing
 
-### Verification After Build
-1. Log in as nakul@gmail.com (super admin)
-2. Go to Discover tab
-3. Confirm `KeyRound` icon appears on DEV Chats card
-4. Click it, enter new password + confirm, submit
-5. Verify toast shows success
-6. Log in as another user, confirm key icon is NOT visible
-
-### Security Status (No Changes Needed)
-- **Message UPDATE group injection**: Fixed — `prevent_message_group_change` trigger blocks `group_id` changes, WITH CHECK uses `is_member_of_group()`
-- **Group passwords plaintext**: Fixed — stored value is `$2a$10$...` (bcrypt hash)
-- Both findings already deleted from scanner
+### Security Status
+All security scan findings are either resolved, informational, or intentionally ignored. No error-level findings remain.
 
 ### Files Modified
-- `src/components/GroupCard.tsx` (comment only, to trigger rebuild)
+- `src/hooks/useReadReceipts.ts` (stabilize callback references)
+- `src/components/layout/ChatArea.tsx` (fix useLayoutEffect deps)
+- `src/hooks/useGroups.ts` (add try/catch to joinGroup fetch)
 
