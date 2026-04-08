@@ -18,6 +18,11 @@ export function useReadReceipts(groupId: string | null, messageIds: string[]) {
   const [readReceipts, setReadReceipts] = useState<Record<string, ReadReceipt[]>>({});
   const [loading, setLoading] = useState(true);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const readReceiptsRef = useRef(readReceipts);
+  const messageIdsRef = useRef(messageIds);
+
+  readReceiptsRef.current = readReceipts;
+  messageIdsRef.current = messageIds;
 
   const fetchReadReceipts = useCallback(async () => {
     if (!groupId || messageIds.length === 0) {
@@ -43,7 +48,6 @@ export function useReadReceipts(groupId: string | null, messageIds: string[]) {
       return;
     }
 
-    // Fetch profiles for all unique user_ids
     const userIds = [...new Set(receipts.map((r) => r.user_id))];
     const { data: profiles } = await supabase
       .from("profiles")
@@ -52,7 +56,6 @@ export function useReadReceipts(groupId: string | null, messageIds: string[]) {
 
     const profileMap = new Map(profiles?.map((p) => [p.user_id, p]) || []);
 
-    // Group receipts by message_id
     const grouped: Record<string, ReadReceipt[]> = {};
     receipts.forEach((receipt) => {
       const profile = profileMap.get(receipt.user_id);
@@ -77,8 +80,7 @@ export function useReadReceipts(groupId: string | null, messageIds: string[]) {
     async (messageId: string) => {
       if (!user || !messageId) return;
 
-      // Check if already read
-      const existingReceipts = readReceipts[messageId] || [];
+      const existingReceipts = readReceiptsRef.current[messageId] || [];
       if (existingReceipts.some((r) => r.user_id === user.id)) {
         return;
       }
@@ -92,16 +94,15 @@ export function useReadReceipts(groupId: string | null, messageIds: string[]) {
         console.error("Error marking message as read:", error);
       }
     },
-    [user, readReceipts]
+    [user]
   );
 
-  // Mark all messages as read
   const markAllAsRead = useCallback(async () => {
-    if (!user || messageIds.length === 0) return;
+    if (!user || messageIdsRef.current.length === 0) return;
 
-    // Filter messages not yet read by current user
-    const unreadMessageIds = messageIds.filter((msgId) => {
-      const receipts = readReceipts[msgId] || [];
+    const currentReceipts = readReceiptsRef.current;
+    const unreadMessageIds = messageIdsRef.current.filter((msgId) => {
+      const receipts = currentReceipts[msgId] || [];
       return !receipts.some((r) => r.user_id === user.id);
     });
 
@@ -117,13 +118,12 @@ export function useReadReceipts(groupId: string | null, messageIds: string[]) {
     if (error && !error.message.includes("duplicate")) {
       console.error("Error marking messages as read:", error);
     }
-  }, [user, messageIds, readReceipts]);
+  }, [user]);
 
   useEffect(() => {
     fetchReadReceipts();
   }, [fetchReadReceipts]);
 
-  // Subscribe to realtime updates
   useEffect(() => {
     if (!groupId || messageIds.length === 0) return;
 
@@ -139,10 +139,8 @@ export function useReadReceipts(groupId: string | null, messageIds: string[]) {
         async (payload) => {
           const newReceipt = payload.new as ReadReceipt;
 
-          // Only process if it's for one of our messages
-          if (!messageIds.includes(newReceipt.message_id)) return;
+          if (!messageIdsRef.current.includes(newReceipt.message_id)) return;
 
-          // Fetch profile for this user
           const { data: profile } = await supabase
             .from("profiles")
             .select("username, avatar_url")
@@ -156,7 +154,6 @@ export function useReadReceipts(groupId: string | null, messageIds: string[]) {
 
           setReadReceipts((prev) => {
             const existing = prev[newReceipt.message_id] || [];
-            // Avoid duplicates
             if (existing.some((r) => r.user_id === newReceipt.user_id)) {
               return prev;
             }
