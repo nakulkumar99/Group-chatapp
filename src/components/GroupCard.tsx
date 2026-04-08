@@ -1,3 +1,4 @@
+// GroupCard — password-reset key icon for super admins
 import { forwardRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Users, UserPlus, UserMinus, Check, Lock, Loader2, KeyRound } from "lucide-react";
