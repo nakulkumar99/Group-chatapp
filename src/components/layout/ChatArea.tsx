@@ -22,6 +22,7 @@ import { usePresence } from "@/hooks/usePresence";
 import { useReadReceipts } from "@/hooks/useReadReceipts";
 import { useReactions } from "@/hooks/useReactions";
 import { useGroupRole } from "@/hooks/useGroupRole";
+import { useAdminRole } from "@/hooks/useAdminRole";
 import { usePinnedMessages } from "@/hooks/usePinnedMessages";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -92,6 +93,7 @@ export function ChatArea({
   const { members } = useGroupMembers(groupId);
   const { typingUsers, onlineCount, startTyping } = usePresence(groupId);
   const { isAdmin, canSendMessages } = useGroupRole(groupId);
+  const { isSuperAdmin } = useAdminRole();
 
   const messageIds = useMemo(() => messages.map((m) => m.id), [messages]);
   const { readReceipts, markAllAsRead } = useReadReceipts(groupId, messageIds);
@@ -306,7 +308,7 @@ export function ChatArea({
           </div>
 
           <div className="flex items-center gap-1">
-            {isAdmin && group.has_password && (
+            {isSuperAdmin && group.has_password && (
               <Button
                 variant="ghost"
                 size="icon"
@@ -317,7 +319,7 @@ export function ChatArea({
                 <KeyRound className="w-5 h-5" />
               </Button>
             )}
-            {isAdmin && (
+            {isSuperAdmin && (
               <Button
                 variant="ghost"
                 size="icon"
