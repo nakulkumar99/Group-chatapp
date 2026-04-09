@@ -1,32 +1,24 @@
 
 
-## Plan: Fix Infinite Re-render Loop and Unhandled Fetch Error
+## Plan: Add Super Admin Key Icon to Password-Protected Groups
 
-### Problem 1: Maximum Update Depth Exceeded
-The `useReadReceipts` hook has a dependency cycle:
-- `markAllAsRead` depends on `readReceipts` (line 104) and `messageIds` (line 100)
-- `ChatArea` calls `markAllAsRead` inside `useLayoutEffect` with `markAllAsRead` as a dependency (line 168)
-- When `markAllAsRead` changes reference (due to `readReceipts` changing), `useLayoutEffect` fires again, which can trigger state updates, causing infinite loops
+### Problem
+The `GroupCard` component already has the `isSuperAdmin` prop and `KeyRound` icon logic, but `ContactsSidebar.tsx` never passes `isSuperAdmin` to `GroupCard`. The `useAdminRole` hook is imported but only `isAdmin` (aliased as `isGlobalAdmin`) is destructured — `isSuperAdmin` is not extracted or forwarded.
 
-**Fix in `src/hooks/useReadReceipts.ts`**:
-- Use `useRef` to hold `readReceipts` and `messageIds` so `markAllAsRead` and `markAsRead` callbacks have stable references
-- Remove `readReceipts` from the dependency array of `markAsRead` and `markAllAsRead` by reading from refs instead
+### Changes
 
-**Fix in `src/components/layout/ChatArea.tsx`**:
-- Remove `markAllAsRead` from the `useLayoutEffect` dependency array (line 168) to prevent re-triggering on every state change
+**File: `src/components/layout/ContactsSidebar.tsx`**
 
-### Problem 2: Unhandled Promise Rejection in joinGroup
-The `joinGroup` function in `src/hooks/useGroups.ts` (line 131) uses raw `fetch()` without try/catch. Network failures cause unhandled promise rejections.
+1. Destructure `isSuperAdmin` from `useAdminRole()` (line 55)
+2. Pass `isSuperAdmin={isSuperAdmin}` to each `<GroupCard>` in the Discover tab (line 298–309)
 
-**Fix in `src/hooks/useGroups.ts`**:
-- Wrap the `fetch` call in a try/catch block
-- Return `{ error }` on network failure instead of throwing
+That's it. The `GroupCard` component already:
+- Shows the `KeyRound` icon when `isSuperAdmin && hasPassword`
+- Opens `ResetGroupPasswordModal` on click
+- The modal calls the `set-group-password` edge function which hashes via bcrypt
 
-### Security Status
-All security scan findings are either resolved, informational, or intentionally ignored. No error-level findings remain.
+No backend changes needed. No new components needed.
 
 ### Files Modified
-- `src/hooks/useReadReceipts.ts` (stabilize callback references)
-- `src/components/layout/ChatArea.tsx` (fix useLayoutEffect deps)
-- `src/hooks/useGroups.ts` (add try/catch to joinGroup fetch)
+- `src/components/layout/ContactsSidebar.tsx` (2 small edits)
 
