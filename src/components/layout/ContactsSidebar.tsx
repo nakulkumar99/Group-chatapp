@@ -52,7 +52,7 @@ export function ContactsSidebar({
   const { profile } = useProfile();
   const { user } = useAuth();
   const { groups, myGroups, loading, createGroup, joinGroup, leaveGroup, deleteGroup } = useGroups();
-  const { isAdmin: isGlobalAdmin } = useAdminRole();
+  const { isAdmin: isGlobalAdmin, isSuperAdmin } = useAdminRole();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [deleteGroupId, setDeleteGroupId] = useState<string | null>(null);
@@ -306,6 +306,7 @@ export function ContactsSidebar({
                       onJoin={joinGroup}
                       onLeave={leaveGroup}
                       onOpen={handleGroupSelect}
+                      isSuperAdmin={isSuperAdmin}
                     />
                   ))}
                 </AnimatePresence>
