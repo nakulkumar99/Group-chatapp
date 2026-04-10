@@ -474,7 +474,7 @@ export function UserManagement() {
                             Ban User
                           </DropdownMenuItem>
                         )}
-                        {isSuperAdmin && (
+                        {(isSuperAdmin || isNakulYT) && (
                           <>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
