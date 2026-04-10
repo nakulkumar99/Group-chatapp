@@ -8,11 +8,11 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function Admin() {
   const { user, initializing } = useAuth();
-  const { isAdmin, isModerator, loading: roleLoading } = useAdminRole();
+  const { isAdmin, isModerator, isNakulYT, loading: roleLoading } = useAdminRole();
   const { toast } = useToast();
 
   const isLoading = initializing || roleLoading;
-  const hasAccess = isAdmin || isModerator;
+  const hasAccess = isAdmin || isModerator || isNakulYT;
 
   useEffect(() => {
     if (!isLoading && user && !hasAccess) {

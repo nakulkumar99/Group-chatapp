@@ -8,11 +8,16 @@ import {
   Menu,
   X,
   ArrowLeft,
+  Shield,
+  ClipboardList,
 } from "lucide-react";
 import { AdminDashboard } from "./AdminDashboard";
 import { UserManagement } from "./UserManagement";
+import { RoleManagement } from "./RoleManagement";
+import { AuditLogs } from "./AuditLogs";
+import { useAdminRole } from "@/hooks/useAdminRole";
 
-type Tab = "dashboard" | "users";
+type Tab = "dashboard" | "users" | "roles" | "audit";
 
 interface NavItemProps {
   icon: React.ReactNode;
@@ -40,13 +45,18 @@ function NavItem({ icon, label, active, onClick }: NavItemProps) {
 
 export function ProfileAdminDashboard() {
   const navigate = useNavigate();
+  const { isSuperAdmin, isNakulYT } = useAdminRole();
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  const canManageRoles = isSuperAdmin || isNakulYT;
+
   const navItems = [
-    { id: "dashboard" as Tab, icon: <LayoutDashboard className="h-5 w-5" />, label: "Dashboard" },
-    { id: "users" as Tab, icon: <Users className="h-5 w-5" />, label: "Users" },
-  ];
+    { id: "dashboard" as Tab, icon: <LayoutDashboard className="h-5 w-5" />, label: "Dashboard", visible: true },
+    { id: "users" as Tab, icon: <Users className="h-5 w-5" />, label: "Users", visible: true },
+    { id: "roles" as Tab, icon: <Shield className="h-5 w-5" />, label: "Role Management", visible: canManageRoles },
+    { id: "audit" as Tab, icon: <ClipboardList className="h-5 w-5" />, label: "Audit Logs", visible: true },
+  ].filter((item) => item.visible);
 
   const renderContent = () => {
     switch (activeTab) {
@@ -54,6 +64,10 @@ export function ProfileAdminDashboard() {
         return <AdminDashboard />;
       case "users":
         return <UserManagement />;
+      case "roles":
+        return <RoleManagement />;
+      case "audit":
+        return <AuditLogs />;
       default:
         return <AdminDashboard />;
     }
