@@ -414,10 +414,16 @@ export function UserManagement() {
                     </div>
                   </TableCell>
                   <TableCell onClick={(e) => e.stopPropagation()}>
-                    <RoleSelector
-                      currentRole={user.role}
-                      onRoleChange={(role) => handleRoleChange(user.user_id, role)}
-                    />
+                    {canManageRoles ? (
+                      <RoleSelector
+                        currentRole={user.role}
+                        onRoleChange={(role) => handleRoleChange(user.user_id, role)}
+                      />
+                    ) : (
+                      <Badge variant={user.role ? (user.role === "super_admin" ? "destructive" : "default") : "outline"}>
+                        {user.role ? user.role.replace(/_/g, " ") : "User"}
+                      </Badge>
+                    )}
                   </TableCell>
                   <TableCell>
                     {getStatusBadge(user.status, user.isBanned)}
