@@ -70,7 +70,8 @@ export function UserManagement() {
     loading,
   } = useAdminUsers();
   const { sendOTP } = usePhoneAuth();
-  const { isSuperAdmin } = useAdminRole();
+  const { isSuperAdmin, isNakulYT } = useAdminRole();
+  const canManageRoles = isSuperAdmin || isNakulYT;
   const { toast } = useToast();
 
   const [users, setUsers] = useState<UserWithStatus[]>([]);
