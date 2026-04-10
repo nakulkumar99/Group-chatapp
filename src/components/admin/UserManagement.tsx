@@ -70,7 +70,8 @@ export function UserManagement() {
     loading,
   } = useAdminUsers();
   const { sendOTP } = usePhoneAuth();
-  const { isSuperAdmin } = useAdminRole();
+  const { isSuperAdmin, isNakulYT } = useAdminRole();
+  const canManageRoles = isSuperAdmin || isNakulYT;
   const { toast } = useToast();
 
   const [users, setUsers] = useState<UserWithStatus[]>([]);
@@ -413,10 +414,16 @@ export function UserManagement() {
                     </div>
                   </TableCell>
                   <TableCell onClick={(e) => e.stopPropagation()}>
-                    <RoleSelector
-                      currentRole={user.role}
-                      onRoleChange={(role) => handleRoleChange(user.user_id, role)}
-                    />
+                    {canManageRoles ? (
+                      <RoleSelector
+                        currentRole={user.role}
+                        onRoleChange={(role) => handleRoleChange(user.user_id, role)}
+                      />
+                    ) : (
+                      <Badge variant={user.role ? (user.role === "super_admin" ? "destructive" : "default") : "outline"}>
+                        {user.role ? user.role.replace(/_/g, " ") : "User"}
+                      </Badge>
+                    )}
                   </TableCell>
                   <TableCell>
                     {getStatusBadge(user.status, user.isBanned)}
@@ -467,7 +474,7 @@ export function UserManagement() {
                             Ban User
                           </DropdownMenuItem>
                         )}
-                        {isSuperAdmin && (
+                        {(isSuperAdmin || isNakulYT) && (
                           <>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
