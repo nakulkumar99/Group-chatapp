@@ -135,17 +135,33 @@ export function ChatArea({
     fetchGroup();
   }, [groupId]);
 
-  // Handle scroll to bottom and track unread
-  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
-    const target = e.target as HTMLDivElement;
-    const distanceFromBottom = target.scrollHeight - target.scrollTop - target.clientHeight;
-    setShowScrollButton(distanceFromBottom > 200);
-    
-    // If scrolled to bottom, reset unread count
-    if (distanceFromBottom < 50) {
-      setUnreadBelowCount(0);
-    }
-  }, []);
+  // Handle scroll to bottom and track unread - RAF throttled
+  const rafRef = useRef<number | null>(null);
+  const scrollViewportRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const viewport = scrollAreaRef.current?.querySelector("[data-radix-scroll-area-viewport]") as HTMLDivElement | null;
+    scrollViewportRef.current = viewport;
+    if (!viewport) return;
+
+    const onScroll = () => {
+      if (rafRef.current) return;
+      rafRef.current = requestAnimationFrame(() => {
+        rafRef.current = null;
+        const distanceFromBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
+        setShowScrollButton(distanceFromBottom > 200);
+        if (distanceFromBottom < 50) {
+          setUnreadBelowCount(0);
+        }
+      });
+    };
+
+    viewport.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      viewport.removeEventListener("scroll", onScroll);
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, [groupId]);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -162,7 +178,7 @@ export function ChatArea({
 
   useLayoutEffect(() => {
     if (!showScrollButton) {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      messagesEndRef.current?.scrollIntoView({ behavior: "instant" });
     }
     if (messages.length > 0) {
       markAllAsRead();
@@ -268,25 +284,15 @@ export function ChatArea({
       <header className="sticky top-0 z-20 bg-card/90 backdrop-blur-xl border-b border-border">
         <div className="px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {isMobile ? (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => navigate("/")}
-                className="hover:bg-accent rounded-full"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </Button>
-            ) : (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => navigate("/")}
-                className="hover:bg-accent rounded-full"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </Button>
-            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate("/")}
+              className="hover:bg-accent rounded-full min-w-[40px] min-h-[40px] relative z-30"
+              style={{ touchAction: "manipulation" }}
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
             <Avatar className="w-10 h-10 border-2 border-primary/30">
               <AvatarFallback className="bg-primary text-primary-foreground font-bold">
                 {getInitials(group.name)}
@@ -400,7 +406,7 @@ export function ChatArea({
           />
         )}
 
-        <ScrollArea className="flex-1 p-4 relative z-10" onScrollCapture={handleScroll}>
+        <ScrollArea className="flex-1 p-4 relative z-10" ref={scrollAreaRef}>
           {messagesLoading ? (
             <div className="flex items-center justify-center h-full">
               <div className="animate-pulse text-muted-foreground">Loading messages...</div>
