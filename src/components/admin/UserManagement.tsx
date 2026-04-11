@@ -623,6 +623,51 @@ export function UserManagement() {
         onSubmit={handleEditSubmit}
         loading={loading}
       />
+
+      {recentLogs.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="text-lg font-semibold text-foreground">Recent Role Changes</h2>
+          <div className="border rounded-lg divide-y">
+            {recentLogs.map((log: any) => (
+              <div key={log.id} className="flex items-center justify-between p-3">
+                <div className="flex items-center gap-2">
+                  <Avatar className="h-6 w-6">
+                    <AvatarImage src={log.admin_profile?.avatar_url || undefined} />
+                    <AvatarFallback className="text-xs">
+                      {log.admin_profile?.username?.slice(0, 2).toUpperCase() || "??"}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="text-sm">
+                    <span className="font-medium">{log.admin_profile?.username || "Unknown"}</span>
+                    {" "}
+                    {log.action === "assign_role" ? "assigned" : "removed"} role
+                    {log.details?.role && (
+                      <Badge variant="secondary" className="ml-1 text-xs">
+                        {roleLabels[log.details.role as string] || log.details.role}
+                      </Badge>
+                    )}
+                  </span>
+                </div>
+                <span className="text-xs text-muted-foreground">
+                  {format(new Date(log.created_at), "MMM d, HH:mm")}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <PasswordConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        onConfirm={handleConfirmedRoleChange}
+        title="Confirm Role Change"
+        description={
+          pendingChange
+            ? `You are about to change ${pendingChange.username}'s role to ${pendingChange.role ? roleLabels[pendingChange.role] : "User"}. Enter your password to confirm.`
+            : "Enter your password to confirm this role change."
+        }
+      />
     </div>
   );
 }
