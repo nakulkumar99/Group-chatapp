@@ -50,11 +50,25 @@ import { DeleteConfirmModal } from "./DeleteConfirmModal";
 import { UserDetailModal } from "./UserDetailModal";
 import { CreateEditUserForm } from "./CreateEditUserForm";
 import { BulkActionBar } from "./BulkActionBar";
+import { PasswordConfirmDialog } from "./PasswordConfirmDialog";
+import { useAuditLogs } from "@/hooks/useAuditLogs";
 import { format } from "date-fns";
 import type { CreateUserInput } from "@/lib/validations";
 
 type GlobalAdminRole = "super_admin" | "admin" | "moderator";
+
+interface PendingRoleChange {
+  userId: string;
+  username: string;
+  role: GlobalAdminRole | null;
+}
 type UserStatus = "active" | "inactive" | "suspended";
+
+const roleLabels: Record<string, string> = {
+  super_admin: "Super Admin",
+  admin: "Admin",
+  moderator: "Moderator",
+};
 
 export function UserManagement() {
   const {
@@ -72,6 +86,7 @@ export function UserManagement() {
   const { sendOTP } = usePhoneAuth();
   const { isSuperAdmin, isNakulYT } = useAdminRole();
   const canManageRoles = isSuperAdmin || isNakulYT;
+  const { fetchLogs } = useAuditLogs();
   const { toast } = useToast();
 
   const [users, setUsers] = useState<UserWithStatus[]>([]);
@@ -88,6 +103,9 @@ export function UserManagement() {
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserWithStatus | null>(null);
+  const [pendingChange, setPendingChange] = useState<PendingRoleChange | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [recentLogs, setRecentLogs] = useState<any[]>([]);
 
   const pageSize = 20;
 
@@ -110,17 +128,36 @@ export function UserManagement() {
     setSelectedUsers(new Set());
   }, [fetchUsers, page, search, roleFilter, statusFilter, verifiedFilter]);
 
+  const loadRecentLogs = useCallback(async () => {
+    const { logs } = await fetchLogs(0, 10, undefined, undefined);
+    const roleLogs = logs.filter(
+      (l: any) => l.action === "assign_role" || l.action === "remove_role"
+    );
+    setRecentLogs(roleLogs.slice(0, 5));
+  }, [fetchLogs]);
+
   useEffect(() => {
     loadUsers();
   }, [loadUsers]);
+
+  useEffect(() => {
+    loadRecentLogs();
+  }, [loadRecentLogs]);
 
   const handleSearch = (value: string) => {
     setSearch(value);
     setPage(0);
   };
 
-  const handleRoleChange = async (userId: string, role: GlobalAdminRole | null) => {
-    const { error } = await assignRole(userId, role);
+  const handleRoleChangeRequest = (userId: string, username: string, role: GlobalAdminRole | null) => {
+    setPendingChange({ userId, username, role });
+    setConfirmOpen(true);
+  };
+
+  const handleConfirmedRoleChange = async () => {
+    if (!pendingChange) return;
+
+    const { error } = await assignRole(pendingChange.userId, pendingChange.role);
     if (error) {
       toast({
         title: "Error",
@@ -128,9 +165,14 @@ export function UserManagement() {
         variant: "destructive",
       });
     } else {
-      toast({ title: "Success", description: "Role updated successfully" });
+      toast({
+        title: "Role Updated",
+        description: `${pendingChange.username}'s role has been updated`,
+      });
       loadUsers();
+      loadRecentLogs();
     }
+    setPendingChange(null);
   };
 
   const handleBan = async (reason: string, expiresAt?: Date) => {
@@ -417,7 +459,7 @@ export function UserManagement() {
                     {canManageRoles ? (
                       <RoleSelector
                         currentRole={user.role}
-                        onRoleChange={(role) => handleRoleChange(user.user_id, role)}
+                        onRoleChange={(role) => handleRoleChangeRequest(user.user_id, user.username, role)}
                       />
                     ) : (
                       <Badge variant={user.role ? (user.role === "super_admin" ? "destructive" : "default") : "outline"}>
@@ -580,6 +622,51 @@ export function UserManagement() {
         user={selectedUser}
         onSubmit={handleEditSubmit}
         loading={loading}
+      />
+
+      {recentLogs.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="text-lg font-semibold text-foreground">Recent Role Changes</h2>
+          <div className="border rounded-lg divide-y">
+            {recentLogs.map((log: any) => (
+              <div key={log.id} className="flex items-center justify-between p-3">
+                <div className="flex items-center gap-2">
+                  <Avatar className="h-6 w-6">
+                    <AvatarImage src={log.admin_profile?.avatar_url || undefined} />
+                    <AvatarFallback className="text-xs">
+                      {log.admin_profile?.username?.slice(0, 2).toUpperCase() || "??"}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="text-sm">
+                    <span className="font-medium">{log.admin_profile?.username || "Unknown"}</span>
+                    {" "}
+                    {log.action === "assign_role" ? "assigned" : "removed"} role
+                    {log.details?.role && (
+                      <Badge variant="secondary" className="ml-1 text-xs">
+                        {roleLabels[log.details.role as string] || log.details.role}
+                      </Badge>
+                    )}
+                  </span>
+                </div>
+                <span className="text-xs text-muted-foreground">
+                  {format(new Date(log.created_at), "MMM d, HH:mm")}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <PasswordConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        onConfirm={handleConfirmedRoleChange}
+        title="Confirm Role Change"
+        description={
+          pendingChange
+            ? `You are about to change ${pendingChange.username}'s role to ${pendingChange.role ? roleLabels[pendingChange.role] : "User"}. Enter your password to confirm.`
+            : "Enter your password to confirm this role change."
+        }
       />
     </div>
   );
