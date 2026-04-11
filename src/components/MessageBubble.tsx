@@ -281,11 +281,7 @@ export function MessageBubble({
   // Render deleted message placeholder
   if (isDeletedForEveryone) {
     return (
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.1 }}
+      <div
         className={`flex gap-2 ${isOwn ? "justify-end" : "justify-start"}`}
       >
         {!isOwn && showAvatar && (
@@ -316,20 +312,20 @@ export function MessageBubble({
             </span>
           </div>
         </div>
-      </motion.div>
+      </div>
     );
   }
 
+  // Only use hover handlers on devices that support hover
+  const supportsHover = typeof window !== "undefined" && window.matchMedia("(hover: hover)").matches;
+
   return (
     <>
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.1 }}
+      <div
         className={`flex gap-2 ${isOwn ? "justify-end" : "justify-start"}`}
-        onMouseEnter={() => setShowActions(true)}
-        onMouseLeave={() => setShowActions(false)}
+        onMouseEnter={supportsHover ? () => setShowActions(true) : undefined}
+        onMouseLeave={supportsHover ? () => setShowActions(false) : undefined}
+        onTouchStart={!supportsHover ? () => setShowActions(true) : undefined}
       >
         {!isOwn && showAvatar && (
           <Avatar className="w-8 h-8 shrink-0 mt-auto">
@@ -503,7 +499,7 @@ export function MessageBubble({
             </div>
           )}
         </div>
-      </motion.div>
+      </div>
 
       {/* Delete for Everyone Confirmation Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
