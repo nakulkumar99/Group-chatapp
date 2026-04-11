@@ -50,10 +50,18 @@ import { DeleteConfirmModal } from "./DeleteConfirmModal";
 import { UserDetailModal } from "./UserDetailModal";
 import { CreateEditUserForm } from "./CreateEditUserForm";
 import { BulkActionBar } from "./BulkActionBar";
+import { PasswordConfirmDialog } from "./PasswordConfirmDialog";
+import { useAuditLogs } from "@/hooks/useAuditLogs";
 import { format } from "date-fns";
 import type { CreateUserInput } from "@/lib/validations";
 
 type GlobalAdminRole = "super_admin" | "admin" | "moderator";
+
+interface PendingRoleChange {
+  userId: string;
+  username: string;
+  role: GlobalAdminRole | null;
+}
 type UserStatus = "active" | "inactive" | "suspended";
 
 export function UserManagement() {
