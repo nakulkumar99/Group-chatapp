@@ -128,17 +128,36 @@ export function UserManagement() {
     setSelectedUsers(new Set());
   }, [fetchUsers, page, search, roleFilter, statusFilter, verifiedFilter]);
 
+  const loadRecentLogs = useCallback(async () => {
+    const { logs } = await fetchLogs(0, 10, undefined, undefined);
+    const roleLogs = logs.filter(
+      (l: any) => l.action === "assign_role" || l.action === "remove_role"
+    );
+    setRecentLogs(roleLogs.slice(0, 5));
+  }, [fetchLogs]);
+
   useEffect(() => {
     loadUsers();
   }, [loadUsers]);
+
+  useEffect(() => {
+    loadRecentLogs();
+  }, [loadRecentLogs]);
 
   const handleSearch = (value: string) => {
     setSearch(value);
     setPage(0);
   };
 
-  const handleRoleChange = async (userId: string, role: GlobalAdminRole | null) => {
-    const { error } = await assignRole(userId, role);
+  const handleRoleChangeRequest = (userId: string, username: string, role: GlobalAdminRole | null) => {
+    setPendingChange({ userId, username, role });
+    setConfirmOpen(true);
+  };
+
+  const handleConfirmedRoleChange = async () => {
+    if (!pendingChange) return;
+
+    const { error } = await assignRole(pendingChange.userId, pendingChange.role);
     if (error) {
       toast({
         title: "Error",
@@ -146,9 +165,14 @@ export function UserManagement() {
         variant: "destructive",
       });
     } else {
-      toast({ title: "Success", description: "Role updated successfully" });
+      toast({
+        title: "Role Updated",
+        description: `${pendingChange.username}'s role has been updated`,
+      });
       loadUsers();
+      loadRecentLogs();
     }
+    setPendingChange(null);
   };
 
   const handleBan = async (reason: string, expiresAt?: Date) => {
