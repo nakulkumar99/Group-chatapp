@@ -103,6 +103,9 @@ export function UserManagement() {
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserWithStatus | null>(null);
+  const [pendingChange, setPendingChange] = useState<PendingRoleChange | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [recentLogs, setRecentLogs] = useState<any[]>([]);
 
   const pageSize = 20;
 
