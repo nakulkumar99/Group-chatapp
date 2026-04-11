@@ -459,7 +459,7 @@ export function UserManagement() {
                     {canManageRoles ? (
                       <RoleSelector
                         currentRole={user.role}
-                        onRoleChange={(role) => handleRoleChange(user.user_id, role)}
+                        onRoleChange={(role) => handleRoleChangeRequest(user.user_id, user.username, role)}
                       />
                     ) : (
                       <Badge variant={user.role ? (user.role === "super_admin" ? "destructive" : "default") : "outline"}>
