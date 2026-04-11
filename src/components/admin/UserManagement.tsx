@@ -64,6 +64,12 @@ interface PendingRoleChange {
 }
 type UserStatus = "active" | "inactive" | "suspended";
 
+const roleLabels: Record<string, string> = {
+  super_admin: "Super Admin",
+  admin: "Admin",
+  moderator: "Moderator",
+};
+
 export function UserManagement() {
   const {
     fetchUsers,
