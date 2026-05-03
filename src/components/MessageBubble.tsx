@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { useSignedUrl } from "@/hooks/useSignedUrl";
 import { CheckCheck, Download, FileText, Play, Image as ImageIcon, X, Pencil, Check, Pin, Trash2 } from "lucide-react";
@@ -116,6 +116,15 @@ export function MessageBubble({
       .toUpperCase()
       .slice(0, 2);
   };
+
+  const formattedTime = useMemo(
+    () =>
+      new Date(message.created_at).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    [message.created_at]
+  );
 
   const formatTime = (date: string) => {
     return new Date(date).toLocaleTimeString([], {
@@ -325,7 +334,6 @@ export function MessageBubble({
         className={`flex gap-2 ${isOwn ? "justify-end" : "justify-start"}`}
         onMouseEnter={supportsHover ? () => setShowActions(true) : undefined}
         onMouseLeave={supportsHover ? () => setShowActions(false) : undefined}
-        onTouchStart={!supportsHover ? () => setShowActions(true) : undefined}
       >
         {!isOwn && showAvatar && (
           <Avatar className="w-8 h-8 shrink-0 mt-auto">
