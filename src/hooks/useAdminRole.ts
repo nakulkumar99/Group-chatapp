@@ -38,15 +38,25 @@ export function useAdminRole() {
     }
 
     const checkAdminRole = async () => {
+      // Check admin role
       const { data, error } = await supabase
         .from("admin_roles")
         .select("role")
         .eq("user_id", user.id)
         .maybeSingle();
 
+      // Check if user is Nakul_YT
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("username")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      const isNakulYT = profileData?.username === "Nakul_YT";
+
       if (error) {
         console.error("Error checking admin role:", error);
-        setState((prev) => ({ ...prev, loading: false }));
+        setState((prev) => ({ ...prev, loading: false, isNakulYT }));
         return;
       }
 
@@ -56,7 +66,7 @@ export function useAdminRole() {
           isAdmin: role === "super_admin" || role === "admin",
           isSuperAdmin: role === "super_admin",
           isModerator: role === "moderator",
-          isNakulYT: false,
+          isNakulYT,
           role,
           loading: false,
         });
@@ -65,7 +75,7 @@ export function useAdminRole() {
           isAdmin: false,
           isSuperAdmin: false,
           isModerator: false,
-          isNakulYT: false,
+          isNakulYT,
           role: null,
           loading: false,
         });
