@@ -126,12 +126,6 @@ export function MessageBubble({
     [message.created_at]
   );
 
-  const formatTime = (date: string) => {
-    return new Date(date).toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
 
   const isImage = message.file_type?.startsWith("image/");
   const isVideo = message.file_type?.startsWith("video/");
