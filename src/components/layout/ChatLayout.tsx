@@ -54,7 +54,7 @@ function ChatLayoutContent() {
   if (!user) return null;
 
   return (
-    <div className="h-screen flex overflow-hidden bg-background theme-transition">
+    <div className="h-[100dvh] flex overflow-hidden bg-background theme-transition">
       {/* Contacts Sidebar */}
       <ContactsSidebar
         isOpen={showSidebar}
