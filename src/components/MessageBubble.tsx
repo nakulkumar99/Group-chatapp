@@ -317,7 +317,7 @@ export function MessageBubble({
               🚫 This message was deleted
             </p>
             <span className="text-[10px] text-muted-foreground/60 block text-right mt-1">
-              {formatTime(message.created_at)}
+              {formattedTime}
             </span>
           </div>
         </div>
@@ -476,7 +476,7 @@ export function MessageBubble({
               )}
               <span className={`absolute bottom-1 right-2 text-[10px] flex items-center gap-1 ${isOwn ? "text-primary-foreground/60" : "text-muted-foreground"}`}>
                 {message.edited_at && <span className="italic">edited</span>}
-                {formatTime(message.created_at)}
+                {formattedTime}
                 {isOwn && <CheckCheck className={`w-3.5 h-3.5 ${readReceipts.length > 0 ? "text-sky-400" : "text-primary-foreground/40"}`} />}
               </span>
             </div>
