@@ -183,7 +183,7 @@ export function ChatArea({
     if (messages.length > 0) {
       markAllAsRead();
     }
-  }, [messages, showScrollButton]);
+  }, [messages.length, showScrollButton]);
 
   const handleSendMessage = async (
     content: string,

@@ -1,37 +1,37 @@
+## Plan: Apply user's smooth-scroll snippet and test on mobile
 
+### What the user's code says
+```ts
+const scrollToBottom = useCallback(() => {
+  messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  setUnreadBelowCount(0);
+}, []);
 
-## Plan: Fix Mobile Back Button and Scrolling Performance
+useLayoutEffect(() => {
+  if (!showScrollButton) {
+    messagesEndRef.current?.scrollIntoView({ behavior: "instant" });
+  }
+}, [messagesLength, showScrollButton]);
+```
 
-### Problem 1: Back Button
-The back button in `ChatArea.tsx` (lines 271-289) uses a standard `Button` with `size="icon"` which renders as a small target. The mobile and desktop branches are identical code (dead duplication). The button needs a guaranteed 40x40px touch target and proper touch handling.
+### Current code in `src/components/layout/ChatArea.tsx`
+- `scrollToBottom` (lines 166-169) is already identical to the snippet.
+- `useLayoutEffect` (lines 179-186) matches the snippet's body but uses `[messages, showScrollButton]` as deps (full array) instead of `messagesLength`. It also calls `markAllAsRead()` which the snippet does not show.
 
-### Problem 2: Scrolling Performance
-The chat uses Radix `ScrollArea` which wraps content in a custom viewport. The `onScrollCapture` handler on `ScrollArea` fires frequently and calls `setShowScrollButton` on every scroll event (causing re-renders). `MessageBubble` uses `framer-motion` `motion.div` with `onMouseEnter`/`onMouseLeave` for hover actions — on mobile these fire erratically and add overhead. The `useLayoutEffect` that calls `scrollIntoView({ behavior: "smooth" })` on every message change can cause layout thrashing.
-
-### Changes
-
+### Change
 **File: `src/components/layout/ChatArea.tsx`**
+- Change the `useLayoutEffect` dependency array from `[messages, showScrollButton]` to `[messages.length, showScrollButton]` to match the snippet. This prevents the layout effect from re-firing whenever the `messages` array reference changes (edits, reactions, read-receipt updates) and only re-scrolls when the count changes — reducing layout work and improving scroll smoothness.
+- Keep `markAllAsRead()` inside the effect (removing it would break read receipts; the user did not ask to remove it).
+- `scrollToBottom` stays as-is (already matches).
 
-1. **Back button fix**: Remove duplicate mobile/desktop branches (lines 271-289). Use a single button with explicit `min-w-[40px] min-h-[40px]` and `touch-action: manipulation` to prevent double-tap zoom and ensure reliable taps. Add `relative z-30` to ensure it's above any overlapping elements.
+No other files change.
 
-2. **Scroll handler optimization**: Wrap `handleScroll` logic with a `requestAnimationFrame` throttle so `setShowScrollButton` only fires once per frame instead of on every scroll event. This eliminates jank from state updates during scroll.
-
-3. **Replace `onScrollCapture` with native scroll listener**: Attach the scroll handler directly to the Radix viewport element (the actual scrolling `div`) using a ref and `useEffect` with `{ passive: true }` for hardware-accelerated scroll. This avoids React's synthetic event overhead.
-
-4. **Fix `useLayoutEffect` scroll**: Change `scrollIntoView({ behavior: "smooth" })` to `scrollIntoView({ behavior: "instant" })` for initial loads (avoids layout shift), keep smooth only for user-triggered scroll-to-bottom.
-
-**File: `src/components/MessageBubble.tsx`**
-
-5. **Remove hover-based re-renders on mobile**: The `onMouseEnter`/`onMouseLeave` handlers that toggle `showActions` state cause re-renders on every touch interaction. Wrap them so they only fire on non-touch devices (`window.matchMedia('(hover: hover)')`), or use CSS `:hover` instead of state.
-
-6. **Simplify motion wrapper**: Replace the `motion.div` wrapper for each message with a plain `div`. The existing memory note confirms this optimization pattern is established in the project (lightweight animation strategy).
-
-**File: `src/components/ui/scroll-area.tsx`**
-
-7. **Add hardware acceleration**: Add `will-change: transform` and `-webkit-overflow-scrolling: touch` to the Viewport element for smoother iOS scrolling.
+### Test on mobile viewport
+1. `browser--navigate_to_sandbox` at width 390, height 844 (iPhone size), path `/`.
+2. `browser--observe` to find a group/chat to open, then `browser--act` to open it.
+3. `browser--act` to scroll the messages area up and down; verify the Scroll-to-Bottom button appears past 200px.
+4. `browser--act` to tap the back arrow (top-left ArrowLeft); confirm navigation back to `/`.
+5. `browser--screenshot` after each step and report findings.
 
 ### Files Modified
-- `src/components/layout/ChatArea.tsx` (back button fix + scroll optimization)
-- `src/components/MessageBubble.tsx` (reduce re-renders on mobile)
-- `src/components/ui/scroll-area.tsx` (iOS scroll smoothing)
-
+- `src/components/layout/ChatArea.tsx` (one-line dep array change)
