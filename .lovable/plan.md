@@ -1,22 +1,37 @@
+## Plan: Apply user's smooth-scroll snippet and test on mobile
 
+### What the user's code says
+```ts
+const scrollToBottom = useCallback(() => {
+  messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  setUnreadBelowCount(0);
+}, []);
 
-## Plan: Add Password Confirmation and Audit Log to User Management Role Changes
+useLayoutEffect(() => {
+  if (!showScrollButton) {
+    messagesEndRef.current?.scrollIntoView({ behavior: "instant" });
+  }
+}, [messagesLength, showScrollButton]);
+```
 
-### Problem
-The User Management page allows role changes directly without password confirmation. The Role Management tab has password confirmation and audit logs, but User Management does not.
+### Current code in `src/components/layout/ChatArea.tsx`
+- `scrollToBottom` (lines 166-169) is already identical to the snippet.
+- `useLayoutEffect` (lines 179-186) matches the snippet's body but uses `[messages, showScrollButton]` as deps (full array) instead of `messagesLength`. It also calls `markAllAsRead()` which the snippet does not show.
 
-### Changes
+### Change
+**File: `src/components/layout/ChatArea.tsx`**
+- Change the `useLayoutEffect` dependency array from `[messages, showScrollButton]` to `[messages.length, showScrollButton]` to match the snippet. This prevents the layout effect from re-firing whenever the `messages` array reference changes (edits, reactions, read-receipt updates) and only re-scrolls when the count changes — reducing layout work and improving scroll smoothness.
+- Keep `markAllAsRead()` inside the effect (removing it would break read receipts; the user did not ask to remove it).
+- `scrollToBottom` stays as-is (already matches).
 
-**File: `src/components/admin/UserManagement.tsx`**
+No other files change.
 
-1. Import `PasswordConfirmDialog` and `useAuditLogs`
-2. Add state for `pendingChange` (userId, username, role) and `confirmOpen`
-3. Add state and effect for `recentLogs` (fetched via `useAuditLogs().fetchLogs`, filtered to role actions)
-4. Change `handleRoleChange` to store the pending change and open the confirm dialog instead of calling `assignRole` directly
-5. Add `handleConfirmedRoleChange` that calls `assignRole` after password verification, then reloads users and logs
-6. Add `PasswordConfirmDialog` component at the bottom with the pending change context
-7. Add a "Recent Role Changes" section below the pagination (same layout as in `RoleManagement.tsx`) showing last 5 role-related audit logs with admin avatar, action description, and timestamp
+### Test on mobile viewport
+1. `browser--navigate_to_sandbox` at width 390, height 844 (iPhone size), path `/`.
+2. `browser--observe` to find a group/chat to open, then `browser--act` to open it.
+3. `browser--act` to scroll the messages area up and down; verify the Scroll-to-Bottom button appears past 200px.
+4. `browser--act` to tap the back arrow (top-left ArrowLeft); confirm navigation back to `/`.
+5. `browser--screenshot` after each step and report findings.
 
 ### Files Modified
-- `src/components/admin/UserManagement.tsx` (add password confirm + audit log section)
-
+- `src/components/layout/ChatArea.tsx` (one-line dep array change)
