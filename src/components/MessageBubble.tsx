@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { useSignedUrl } from "@/hooks/useSignedUrl";
 import { CheckCheck, Download, FileText, Play, Image as ImageIcon, X, Pencil, Check, Pin, Trash2 } from "lucide-react";
@@ -117,12 +117,15 @@ export function MessageBubble({
       .slice(0, 2);
   };
 
-  const formatTime = (date: string) => {
-    return new Date(date).toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
+  const formattedTime = useMemo(
+    () =>
+      new Date(message.created_at).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    [message.created_at]
+  );
+
 
   const isImage = message.file_type?.startsWith("image/");
   const isVideo = message.file_type?.startsWith("video/");
@@ -308,7 +311,7 @@ export function MessageBubble({
               🚫 This message was deleted
             </p>
             <span className="text-[10px] text-muted-foreground/60 block text-right mt-1">
-              {formatTime(message.created_at)}
+              {formattedTime}
             </span>
           </div>
         </div>
@@ -325,7 +328,6 @@ export function MessageBubble({
         className={`flex gap-2 ${isOwn ? "justify-end" : "justify-start"}`}
         onMouseEnter={supportsHover ? () => setShowActions(true) : undefined}
         onMouseLeave={supportsHover ? () => setShowActions(false) : undefined}
-        onTouchStart={!supportsHover ? () => setShowActions(true) : undefined}
       >
         {!isOwn && showAvatar && (
           <Avatar className="w-8 h-8 shrink-0 mt-auto">
@@ -468,7 +470,7 @@ export function MessageBubble({
               )}
               <span className={`absolute bottom-1 right-2 text-[10px] flex items-center gap-1 ${isOwn ? "text-primary-foreground/60" : "text-muted-foreground"}`}>
                 {message.edited_at && <span className="italic">edited</span>}
-                {formatTime(message.created_at)}
+                {formattedTime}
                 {isOwn && <CheckCheck className={`w-3.5 h-3.5 ${readReceipts.length > 0 ? "text-sky-400" : "text-primary-foreground/40"}`} />}
               </span>
             </div>

@@ -1,5 +1,4 @@
 import { useEffect, useRef, useLayoutEffect, useMemo, useState, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import {
   Users,
   MoreVertical,
@@ -423,8 +422,7 @@ export function ChatArea({
             </div>
           ) : (
             <div className="space-y-2">
-              <AnimatePresence mode="sync">
-                {messages.map((message, index) => {
+              {messages.map((message, index) => {
                   const isOwnMessage = message.user_id === user?.id;
                   const showAvatar =
                     index === 0 || messages[index - 1]?.user_id !== message.user_id;
@@ -453,7 +451,6 @@ export function ChatArea({
                     />
                   );
                 })}
-              </AnimatePresence>
               <div ref={messagesEndRef} />
             </div>
           )}
