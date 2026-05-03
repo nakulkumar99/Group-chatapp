@@ -72,27 +72,75 @@ Deno.serve(async (req) => {
 
     // Check password if group has one
     if (group.has_password) {
+      // Rate limit: max 5 failed attempts per (user, group) per 15 min
+      const WINDOW_MS = 15 * 60 * 1000;
+      const MAX_ATTEMPTS = 5;
+      const now = new Date();
+      const windowCutoff = new Date(now.getTime() - WINDOW_MS).toISOString();
+
+      const { data: existingAttempt } = await serviceClient
+        .from("group_join_attempts")
+        .select("id, attempt_count, window_start")
+        .eq("user_id", user.id)
+        .eq("group_id", group_id)
+        .gte("window_start", windowCutoff)
+        .maybeSingle();
+
+      if (existingAttempt && existingAttempt.attempt_count >= MAX_ATTEMPTS) {
+        return new Response(
+          JSON.stringify({ error: "Too many attempts. Please try again later." }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       const { data: groupPw } = await serviceClient
         .from("group_passwords")
         .select("password")
         .eq("group_id", group_id)
         .single();
 
+      const recordFailure = async () => {
+        if (existingAttempt) {
+          await serviceClient
+            .from("group_join_attempts")
+            .update({ attempt_count: existingAttempt.attempt_count + 1 })
+            .eq("id", existingAttempt.id);
+        } else {
+          // Clean up old expired rows for this pair, then insert
+          await serviceClient
+            .from("group_join_attempts")
+            .delete()
+            .eq("user_id", user.id)
+            .eq("group_id", group_id);
+          await serviceClient
+            .from("group_join_attempts")
+            .insert({ user_id: user.id, group_id, attempt_count: 1 });
+        }
+      };
+
       if (!password || !groupPw) {
+        await recordFailure();
         return new Response(
           JSON.stringify({ error: "Incorrect password" }),
           { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      // Compare using bcrypt
       const isValid = bcrypt.compareSync(password, groupPw.password);
       if (!isValid) {
+        await recordFailure();
         return new Response(
           JSON.stringify({ error: "Incorrect password" }),
           { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+
+      // Success: clear attempts
+      await serviceClient
+        .from("group_join_attempts")
+        .delete()
+        .eq("user_id", user.id)
+        .eq("group_id", group_id);
     }
 
     // Join the group using service role
