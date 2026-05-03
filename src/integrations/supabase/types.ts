@@ -109,6 +109,30 @@ export type Database = {
           },
         ]
       }
+      group_join_attempts: {
+        Row: {
+          attempt_count: number
+          group_id: string
+          id: string
+          user_id: string
+          window_start: string
+        }
+        Insert: {
+          attempt_count?: number
+          group_id: string
+          id?: string
+          user_id: string
+          window_start?: string
+        }
+        Update: {
+          attempt_count?: number
+          group_id?: string
+          id?: string
+          user_id?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
       group_members: {
         Row: {
           group_id: string
@@ -555,7 +579,6 @@ export type Database = {
         Args: { _group_id: string; _user_id: string }
         Returns: boolean
       }
-      is_nakul_yt: { Args: { _user_id: string }; Returns: boolean }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
