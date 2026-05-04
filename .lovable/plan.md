@@ -1,92 +1,51 @@
 ## Plain explanation
 
-The chat is still stuttering because the message list still does extra work while scrolling and after message/read-receipt updates. The current scroll listener already matches most of your code, but the chat container height still uses `h-screen`, message actions still update state on mobile touches, message timestamps are recalculated on every render, and the message list still uses `AnimatePresence` around every message.
+I checked your database directly: **all your data is still there** — 3 users, 3 profiles, 2 groups, 2 group memberships, 27 messages, and 3 admin roles (including your `super_admin`). Nothing was deleted. Backend connections, RLS policies, and edge functions are all wired correctly.
 
-## Plan
+The real problem is a **React infinite render loop** in `src/hooks/useReadReceipts.ts`. The console shows:
 
-### File: `src/components/layout/ChatLayout.tsx`
+> Maximum update depth exceeded ... at useReadReceipts.ts:15 / :95
 
-1. Change the root chat layout container from:
+When this loop fires inside `ChatArea`, the chat screen freezes/blanks and it looks like "nothing is loading" — groups, members, admin button, messages all appear broken even though the queries succeed. You are also currently on `/auth` (logged out), which is why nothing shows on screen right now; sign in as `nakul@gmail.com` after the fix.
 
-```tsx
-<div className="h-screen flex overflow-hidden bg-background theme-transition">
-```
+## What is wrong
 
-to:
+In `useReadReceipts.ts` the realtime subscription effect has `messageIds` in its dependency array:
 
-```tsx
-<div className="h-[100dvh] flex overflow-hidden bg-background theme-transition">
-```
-
-This applies your `100dvh` container requirement so mobile browser address-bar resizing does not cause height jumps.
-
-### File: `src/components/layout/ChatArea.tsx`
-
-2. Keep the scroll effect in the exact RAF/passive-listener structure you provided:
-
-```tsx
+```ts
 useEffect(() => {
-  const viewport = scrollAreaRef.current?.querySelector("[data-radix-scroll-area-viewport]") as HTMLDivElement | null;
-  scrollViewportRef.current = viewport;
-  if (!viewport) return;
-
-  const onScroll = () => {
-    if (rafRef.current) return;
-
-    rafRef.current = requestAnimationFrame(() => {
-      rafRef.current = null;
-      const distanceFromBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
-      setShowScrollButton(distanceFromBottom > 200);
-      if (distanceFromBottom < 50) {
-        setUnreadBelowCount(0);
-      }
-    });
-  };
-
-  viewport.addEventListener("scroll", onScroll, { passive: true });
-  return () => {
-    viewport.removeEventListener("scroll", onScroll);
-    if (rafRef.current) cancelAnimationFrame(rafRef.current);
-  };
-}, [groupId]);
+  ...subscribe channel...
+}, [groupId, messageIds]);   // messageIds is a NEW array reference every render
 ```
 
-3. Keep `scrollToBottom` exactly as your snippet:
+`messageIds` is rebuilt in `ChatArea` via `useMemo(() => messages.map(m => m.id), [messages])`. Every realtime message INSERT updates `messages`, which produces a new `messageIds` reference, which tears down and re-creates the channel, which triggers more state updates → infinite loop.
 
-```tsx
-const scrollToBottom = useCallback(() => {
-  messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  setUnreadBelowCount(0);
-}, []);
-```
+The hook already has `messageIdsRef` set up exactly to avoid this — it just isn't being used in the subscription effect.
 
-4. Remove `AnimatePresence` from the message list wrapper and render messages directly with `messages.map(...)`.
+## The fix (single file)
 
-This avoids animation bookkeeping for every chat bubble during list updates and keeps the same UI design.
+**`src/hooks/useReadReceipts.ts`** — change the realtime effect so it subscribes once per `groupId` and reads the current `messageIds` from the ref:
 
-5. Remove the unused `motion` / `AnimatePresence` import from `ChatArea.tsx`.
+- Remove `messageIds` from the subscription effect's dependency array (keep only `[groupId]`).
+- Inside the channel handler, use `messageIdsRef.current.includes(...)` (already done) — no other changes needed.
+- Also drop `messageIds` from `fetchReadReceipts`'s `useCallback` deps to avoid a secondary refetch storm; trigger refetch from a separate effect that compares ids.
 
-### File: `src/components/MessageBubble.tsx`
+Concretely:
+1. Subscription effect deps: `[groupId, messageIds]` → `[groupId]`.
+2. `fetchReadReceipts` useCallback deps: `[groupId, messageIds]` → `[groupId]`, and read `messageIdsRef.current` inside it.
+3. The "fetch when ids change" effect stays as `useEffect(() => { fetchReadReceipts(); }, [groupId, messageIds.join(",")])` so we still refetch when the id set actually changes by value, not by reference.
 
-6. Remove mobile `onTouchStart` from each message bubble.
+## What I'm NOT changing
 
-Current mobile behavior changes React state on touch for every message interaction, which can block smooth scroll gestures. Desktop hover actions remain unchanged.
+- No database migrations.
+- No RLS changes.
+- No edge function changes.
+- No changes to auth, groups, members, messages, or admin hooks/queries — they all work; they were just being unmounted by the crashing parent.
+- `useAdminRole` already returns `isNakulYT: false` and `Admin.tsx` reads it safely; admin access works via `isAdmin || isModerator` for your super_admin account.
 
-7. Memoize message time formatting with `useMemo`, so `new Date(...).toLocaleTimeString()` does not recalculate for every bubble on each render.
+## Verification after the fix
 
-This keeps the same visible timestamp but reduces render cost.
-
-### Validation
-
-8. Test on mobile viewport `390x844`:
-- Open `/chat/bf3fbad7-fcff-4d31-9f95-4d2f25555ac0`
-- Scroll the chat messages up and down
-- Confirm the chat area no longer shutters/stutters
-- Tap the back arrow
-- Confirm it navigates back/home
-
-## Files to modify
-
-- `src/components/layout/ChatLayout.tsx`
-- `src/components/layout/ChatArea.tsx`
-- `src/components/MessageBubble.tsx`
+1. Sign in as `nakul@gmail.com` / `nakul@1234`.
+2. Confirm the console no longer shows "Maximum update depth exceeded".
+3. Confirm groups list loads, opening a group shows the 27 existing messages and members.
+4. Confirm the ShieldCheck (admin) icon appears in the chat header and `/admin` route renders the dashboard.

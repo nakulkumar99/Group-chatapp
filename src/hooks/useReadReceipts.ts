@@ -25,7 +25,8 @@ export function useReadReceipts(groupId: string | null, messageIds: string[]) {
   messageIdsRef.current = messageIds;
 
   const fetchReadReceipts = useCallback(async () => {
-    if (!groupId || messageIds.length === 0) {
+    const ids = messageIdsRef.current;
+    if (!groupId || ids.length === 0) {
       setReadReceipts({});
       setLoading(false);
       return;
@@ -34,7 +35,7 @@ export function useReadReceipts(groupId: string | null, messageIds: string[]) {
     const { data: receipts, error } = await supabase
       .from("message_reads")
       .select("*")
-      .in("message_id", messageIds);
+      .in("message_id", ids);
 
     if (error) {
       console.error("Error fetching read receipts:", error);
@@ -74,7 +75,7 @@ export function useReadReceipts(groupId: string | null, messageIds: string[]) {
 
     setReadReceipts(grouped);
     setLoading(false);
-  }, [groupId, messageIds]);
+  }, [groupId]);
 
   const markAsRead = useCallback(
     async (messageId: string) => {
@@ -122,10 +123,10 @@ export function useReadReceipts(groupId: string | null, messageIds: string[]) {
 
   useEffect(() => {
     fetchReadReceipts();
-  }, [fetchReadReceipts]);
+  }, [groupId, messageIds.join(","), fetchReadReceipts]);
 
   useEffect(() => {
-    if (!groupId || messageIds.length === 0) return;
+    if (!groupId) return;
 
     channelRef.current = supabase
       .channel(`read-receipts:${groupId}`)
@@ -171,7 +172,7 @@ export function useReadReceipts(groupId: string | null, messageIds: string[]) {
         supabase.removeChannel(channelRef.current);
       }
     };
-  }, [groupId, messageIds]);
+  }, [groupId]);
 
   return {
     readReceipts,
