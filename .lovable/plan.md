@@ -1,51 +1,48 @@
+# Restore Data Visibility — Fix RLS Helper Function Grants
+
 ## Plain explanation
 
-I checked your database directly: **all your data is still there** — 3 users, 3 profiles, 2 groups, 2 group memberships, 27 messages, and 3 admin roles (including your `super_admin`). Nothing was deleted. Backend connections, RLS policies, and edge functions are all wired correctly.
+Your data is fine. All 3 users, 2 groups, 27 messages, and 3 admin roles still exist in the database.
 
-The real problem is a **React infinite render loop** in `src/hooks/useReadReceipts.ts`. The console shows:
+The problem is that the database functions that RLS policies use to check "is this user a member of this group?" and "is this user an admin?" no longer have permission to run for logged-in users. So every read on `profiles`, `admin_roles`, `group_members`, `messages`, etc. fails with HTTP 403:
 
-> Maximum update depth exceeded ... at useReadReceipts.ts:15 / :95
-
-When this loop fires inside `ChatArea`, the chat screen freezes/blanks and it looks like "nothing is loading" — groups, members, admin button, messages all appear broken even though the queries succeed. You are also currently on `/auth` (logged out), which is why nothing shows on screen right now; sign in as `nakul@gmail.com` after the fix.
-
-## What is wrong
-
-In `useReadReceipts.ts` the realtime subscription effect has `messageIds` in its dependency array:
-
-```ts
-useEffect(() => {
-  ...subscribe channel...
-}, [groupId, messageIds]);   // messageIds is a NEW array reference every render
+```
+"permission denied for function is_member_of_group"
+"permission denied for function is_global_admin"
 ```
 
-`messageIds` is rebuilt in `ChatArea` via `useMemo(() => messages.map(m => m.id), [messages])`. Every realtime message INSERT updates `messages`, which produces a new `messageIds` reference, which tears down and re-creates the channel, which triggers more state updates → infinite loop.
+I verified this directly against the database — `authenticated` and `anon` roles have `EXECUTE = false` on every helper function. A recent security migration revoked these grants without re-granting them.
 
-The hook already has `messageIdsRef` set up exactly to avoid this — it just isn't being used in the subscription effect.
+The fix is one migration that grants `EXECUTE` on the helper functions back to `authenticated` (and `anon` where appropriate). No schema changes, no data changes, no code changes.
 
-## The fix (single file)
+## What I will do
 
-**`src/hooks/useReadReceipts.ts`** — change the realtime effect so it subscribes once per `groupId` and reads the current `messageIds` from the ref:
+### Single SQL migration
 
-- Remove `messageIds` from the subscription effect's dependency array (keep only `[groupId]`).
-- Inside the channel handler, use `messageIdsRef.current.includes(...)` (already done) — no other changes needed.
-- Also drop `messageIds` from `fetchReadReceipts`'s `useCallback` deps to avoid a secondary refetch storm; trigger refetch from a separate effect that compares ids.
+Grant `EXECUTE` on the SECURITY DEFINER helper functions to the `authenticated` role:
 
-Concretely:
-1. Subscription effect deps: `[groupId, messageIds]` → `[groupId]`.
-2. `fetchReadReceipts` useCallback deps: `[groupId, messageIds]` → `[groupId]`, and read `messageIdsRef.current` inside it.
-3. The "fetch when ids change" effect stays as `useEffect(() => { fetchReadReceipts(); }, [groupId, messageIds.join(",")])` so we still refetch when the id set actually changes by value, not by reference.
+- `public.is_member_of_group(uuid, uuid)`
+- `public.is_global_admin(uuid)`
+- `public.is_super_admin(uuid)`
+- `public.is_group_admin(uuid, uuid)`
+- `public.has_group_role(uuid, uuid, app_role)`
+- `public.has_global_role(uuid, global_admin_role)`
 
-## What I'm NOT changing
+These are `SECURITY DEFINER` with locked `search_path = public`, so granting EXECUTE is safe — they only read what they were designed to read.
 
-- No database migrations.
-- No RLS changes.
-- No edge function changes.
-- No changes to auth, groups, members, messages, or admin hooks/queries — they all work; they were just being unmounted by the crashing parent.
-- `useAdminRole` already returns `isNakulYT: false` and `Admin.tsx` reads it safely; admin access works via `isAdmin || isModerator` for your super_admin account.
+### What I will NOT do
 
-## Verification after the fix
+- No schema changes
+- No RLS policy changes
+- No data modification
+- No frontend code changes (the queries in `useAdminRole`, `useGroups`, `useProfile`, etc. are correct — they just can't pass RLS right now)
+- No new tables, no migrations to data
 
-1. Sign in as `nakul@gmail.com` / `nakul@1234`.
-2. Confirm the console no longer shows "Maximum update depth exceeded".
-3. Confirm groups list loads, opening a group shows the 27 existing messages and members.
-4. Confirm the ShieldCheck (admin) icon appears in the chat header and `/admin` route renders the dashboard.
+## Verification after applying
+
+1. Sign in as `nakul@gmail.com`.
+2. Confirm `GET /rest/v1/profiles?user_id=eq.<uid>` returns 200 with the profile row.
+3. Confirm `GET /rest/v1/admin_roles?user_id=eq.<uid>` returns the `super_admin` row.
+4. Confirm `GET /rest/v1/group_members?user_id=eq.<uid>` returns the 2 memberships.
+5. Confirm groups list loads members and messages.
+6. Confirm the Admin dashboard route is accessible.
