@@ -2,6 +2,13 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.91.0";
 
 import { getCorsHeaders } from "../_shared/cors.ts";
 
+const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+const MAX_USER_OTP_PER_HOUR = 5;
+
+interface SendOtpRequest {
+  phone_number: string;
+}
+
 async function hashOtp(otp: string): Promise<string> {
   const data = new TextEncoder().encode(otp);
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
@@ -101,7 +108,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const buf = new Uint32Array(1);
+    crypto.getRandomValues(buf);
+    const otpCode = String(100000 + (buf[0] % 900000));
     const otpHash = await hashOtp(otpCode);
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
 
