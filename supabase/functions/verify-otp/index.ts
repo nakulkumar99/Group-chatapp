@@ -2,6 +2,14 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.91.0";
 
 import { getCorsHeaders } from "../_shared/cors.ts";
 
+const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
+const MAX_FAILED_ATTEMPTS = 5;
+
+interface VerifyOtpRequest {
+  phone_number: string;
+  otp_code: string;
+}
+
 async function hashOtp(otp: string): Promise<string> {
   const data = new TextEncoder().encode(otp);
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
