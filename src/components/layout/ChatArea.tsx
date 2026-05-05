@@ -318,13 +318,13 @@ export function ChatArea({
             </div>
           </div>
 
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
             {isSuperAdmin && group.has_password && (
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => setShowResetPasswordModal(true)}
-                className="hover:bg-accent rounded-full text-primary"
+                className="hover:bg-accent rounded-full text-primary h-9 w-9 sm:h-10 sm:w-10"
                 title="Reset Group Password"
               >
                 <KeyRound className="w-5 h-5" />
@@ -335,7 +335,7 @@ export function ChatArea({
                 variant="ghost"
                 size="icon"
                 onClick={onOpenMembers}
-                className="hover:bg-accent rounded-full text-primary"
+                className="hover:bg-accent rounded-full text-primary h-9 w-9 sm:h-10 sm:w-10"
                 title="Admin Settings"
               >
                 <ShieldCheck className="w-5 h-5" />
@@ -345,7 +345,7 @@ export function ChatArea({
               variant="ghost"
               size="icon"
               onClick={onOpenMembers}
-              className={`hover:bg-accent rounded-full ${showMembersPanel ? "bg-accent" : ""}`}
+              className={`hover:bg-accent rounded-full h-9 w-9 sm:h-10 sm:w-10 ${showMembersPanel ? "bg-accent" : ""}`}
             >
               <Users className="w-5 h-5" />
             </Button>
@@ -353,14 +353,14 @@ export function ChatArea({
               variant="ghost"
               size="icon"
               onClick={onOpenSettings}
-              className="hover:bg-accent rounded-full"
+              className="hover:bg-accent rounded-full h-9 w-9 sm:h-10 sm:w-10"
             >
               <Settings className="w-5 h-5" />
             </Button>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="hover:bg-accent rounded-full">
+                <Button variant="ghost" size="icon" className="hover:bg-accent rounded-full h-9 w-9 sm:h-10 sm:w-10">
                   <MoreVertical className="w-5 h-5" />
                 </Button>
               </DropdownMenuTrigger>
