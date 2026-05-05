@@ -168,7 +168,13 @@ export default function ChatRoom() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => navigate("/")}
+              onClick={() => {
+                if (window.history.length > 1) {
+                  navigate(-1);
+                } else {
+                  navigate("/", { replace: true });
+                }
+              }}
               className="hover:bg-white/10 text-white"
             >
               <ArrowLeft className="w-5 h-5" />
