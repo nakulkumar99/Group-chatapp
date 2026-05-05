@@ -281,8 +281,8 @@ export function ChatArea({
     <div className="flex-1 flex flex-col min-w-0 relative">
       {/* Header */}
       <header className="sticky top-0 z-20 bg-card/90 backdrop-blur-xl border-b border-border">
-        <div className="px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="px-2 sm:px-4 h-14 sm:h-16 flex items-center justify-between gap-1">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
             <Button
               variant="ghost"
               size="icon"
@@ -293,12 +293,12 @@ export function ChatArea({
                   navigate("/", { replace: true });
                 }
               }}
-              className="hover:bg-accent rounded-full min-w-[40px] min-h-[40px] relative z-30"
+              className="hover:bg-accent rounded-full min-w-[40px] min-h-[40px] h-10 w-10 shrink-0 relative z-30"
               style={{ touchAction: "manipulation" }}
             >
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <Avatar className="w-10 h-10 border-2 border-primary/30">
+            <Avatar className="w-9 h-9 sm:w-10 sm:h-10 border-2 border-primary/30 shrink-0">
               <AvatarFallback className="bg-primary text-primary-foreground font-bold">
                 {getInitials(group.name)}
               </AvatarFallback>
@@ -318,13 +318,13 @@ export function ChatArea({
             </div>
           </div>
 
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
             {isSuperAdmin && group.has_password && (
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => setShowResetPasswordModal(true)}
-                className="hover:bg-accent rounded-full text-primary"
+                className="hover:bg-accent rounded-full text-primary h-9 w-9 sm:h-10 sm:w-10"
                 title="Reset Group Password"
               >
                 <KeyRound className="w-5 h-5" />
@@ -335,7 +335,7 @@ export function ChatArea({
                 variant="ghost"
                 size="icon"
                 onClick={onOpenMembers}
-                className="hover:bg-accent rounded-full text-primary"
+                className="hover:bg-accent rounded-full text-primary h-9 w-9 sm:h-10 sm:w-10"
                 title="Admin Settings"
               >
                 <ShieldCheck className="w-5 h-5" />
@@ -345,7 +345,7 @@ export function ChatArea({
               variant="ghost"
               size="icon"
               onClick={onOpenMembers}
-              className={`hover:bg-accent rounded-full ${showMembersPanel ? "bg-accent" : ""}`}
+              className={`hover:bg-accent rounded-full h-9 w-9 sm:h-10 sm:w-10 ${showMembersPanel ? "bg-accent" : ""}`}
             >
               <Users className="w-5 h-5" />
             </Button>
@@ -353,14 +353,14 @@ export function ChatArea({
               variant="ghost"
               size="icon"
               onClick={onOpenSettings}
-              className="hover:bg-accent rounded-full"
+              className="hover:bg-accent rounded-full h-9 w-9 sm:h-10 sm:w-10"
             >
               <Settings className="w-5 h-5" />
             </Button>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="hover:bg-accent rounded-full">
+                <Button variant="ghost" size="icon" className="hover:bg-accent rounded-full h-9 w-9 sm:h-10 sm:w-10">
                   <MoreVertical className="w-5 h-5" />
                 </Button>
               </DropdownMenuTrigger>
