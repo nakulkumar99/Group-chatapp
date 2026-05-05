@@ -30,9 +30,7 @@ function ChatLayoutContent() {
   }, [user, authLoading, navigate]);
 
   useEffect(() => {
-    if (groupId) {
-      setSelectedGroupId(groupId);
-    }
+    setSelectedGroupId(groupId ?? null);
   }, [groupId]);
 
   const handleSelectGroup = (id: string) => {

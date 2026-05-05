@@ -286,7 +286,13 @@ export function ChatArea({
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => navigate("/")}
+              onClick={() => {
+                if (window.history.length > 1) {
+                  navigate(-1);
+                } else {
+                  navigate("/", { replace: true });
+                }
+              }}
               className="hover:bg-accent rounded-full min-w-[40px] min-h-[40px] relative z-30"
               style={{ touchAction: "manipulation" }}
             >
