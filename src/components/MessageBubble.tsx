@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { useSignedUrl } from "@/hooks/useSignedUrl";
+import { renderMessageText } from "@/lib/renderMessageText";
 import { CheckCheck, Download, FileText, Play, Image as ImageIcon, X, Pencil, Check, Pin, Trash2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
