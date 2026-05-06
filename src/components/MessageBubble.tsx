@@ -324,7 +324,7 @@ export function MessageBubble({
   return (
     <>
       <div
-        className={`flex gap-2 ${isOwn ? "justify-end" : "justify-start"}`}
+        className={`flex gap-2 w-full ${isOwn ? "justify-end" : "justify-start"}`}
         onMouseEnter={supportsHover ? () => setShowActions(true) : undefined}
         onMouseLeave={supportsHover ? () => setShowActions(false) : undefined}
       >
@@ -339,9 +339,12 @@ export function MessageBubble({
           </Avatar>
         )}
         {!isOwn && !showAvatar && <div className="w-8 shrink-0" />}
-        <div className={`max-w-[75%] ${isOwn ? "items-end" : "items-start"}`}>
+        <div
+          className={`max-w-[85%] sm:max-w-[75%] min-w-0 flex flex-col ${isOwn ? "items-end" : "items-start"}`}
+          onClick={!supportsHover ? () => setShowActions((s) => !s) : undefined}
+        >
           {showName && (
-            <p className="text-xs text-primary mb-1 ml-2 font-medium">
+            <p className="text-xs text-primary mb-1 ml-2 font-medium truncate">
               {message.profile?.username || "Unknown"}
             </p>
           )}
