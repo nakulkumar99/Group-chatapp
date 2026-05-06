@@ -153,8 +153,12 @@
     @apply transition-all duration-200 hover:bg-accent/50;
   }
 
+  .chat-bubble {
+    @apply px-3 py-2 text-sm leading-snug shadow-sm;
+  }
+
   .message-bubble-own {
-    @apply bg-chat-own text-foreground rounded-2xl rounded-tr-sm shadow-sm;
+    @apply chat-bubble bg-chat-own text-foreground rounded-2xl rounded-tr-sm;
   }
 
   .dark .message-bubble-own {
@@ -162,7 +166,13 @@
   }
 
   .message-bubble-other {
-    @apply bg-chat-other text-foreground rounded-2xl rounded-tl-sm shadow-sm;
+    @apply chat-bubble bg-chat-other text-foreground rounded-2xl rounded-tl-sm;
+  }
+
+  .emoji {
+    font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Twemoji Mozilla", sans-serif;
+    line-height: 1;
+    font-style: normal;
   }
 
   .typing-indicator {
