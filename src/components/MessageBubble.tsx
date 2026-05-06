@@ -354,8 +354,8 @@ export function MessageBubble({
               <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className={`absolute top-0 flex items-center gap-1 z-20 ${
-                  isOwn ? "-left-28" : "-right-28"
+                className={`absolute -top-9 z-20 flex items-center gap-1 rounded-full border border-border bg-popover px-1 py-0.5 shadow-md ${
+                  isOwn ? "right-0" : "left-0"
                 }`}
               >
                 {onReact && (
