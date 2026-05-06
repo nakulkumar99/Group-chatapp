@@ -411,7 +411,7 @@ export function ChatArea({
           />
         )}
 
-        <ScrollArea className="flex-1 p-4 relative z-10" ref={scrollAreaRef}>
+        <ScrollArea className="flex-1 px-3 sm:px-4 py-3 relative z-10 overflow-x-hidden [&_[data-radix-scroll-area-viewport]>div]:!min-w-0" ref={scrollAreaRef}>
           {messagesLoading ? (
             <div className="flex items-center justify-center h-full">
               <div className="animate-pulse text-muted-foreground">Loading messages...</div>
