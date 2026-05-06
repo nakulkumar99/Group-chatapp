@@ -163,7 +163,7 @@ export default function ChatRoom() {
     <div className="min-h-screen bg-background flex flex-col">
       {/* WhatsApp-style Header */}
       <header className="sticky top-0 z-20 bg-[hsl(174,57%,26%)] shadow-lg">
-        <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
+        <div className="w-full px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"
@@ -255,7 +255,7 @@ export default function ChatRoom() {
         </div>
       </header>
 
-      <div className="flex-1 flex overflow-hidden max-w-4xl mx-auto w-full">
+      <div className="flex-1 flex overflow-hidden w-full">
         {/* Messages Area - WhatsApp style background */}
         <div 
           className="flex-1 flex flex-col"
