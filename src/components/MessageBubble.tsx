@@ -430,7 +430,7 @@ export function MessageBubble({
             )}
 
             <div
-              className={`px-3 py-2 relative ${
+              className={`relative min-w-0 ${
                 isOwn ? "message-bubble-own" : "message-bubble-other"
               }`}
             >
@@ -447,35 +447,44 @@ export function MessageBubble({
                   <Input
                     value={editContent}
                     onChange={(e) => setEditContent(e.target.value)}
-                    className="text-sm bg-transparent border-border text-inherit h-8"
+                    className="text-sm bg-transparent border-border text-inherit h-8 min-w-0"
                     autoFocus
                     onKeyDown={(e) => {
                       if (e.key === "Enter") handleSaveEdit();
                       if (e.key === "Escape") handleCancelEdit();
                     }}
                   />
-                  <Button size="icon" variant="ghost" className="h-6 w-6" onClick={handleSaveEdit}>
+                  <Button size="icon" variant="ghost" aria-label="Save edit" className="h-7 w-7 shrink-0" onClick={handleSaveEdit}>
                     <Check className="w-4 h-4" />
                   </Button>
-                  <Button size="icon" variant="ghost" className="h-6 w-6" onClick={handleCancelEdit}>
+                  <Button size="icon" variant="ghost" aria-label="Cancel edit" className="h-7 w-7 shrink-0" onClick={handleCancelEdit}>
                     <X className="w-4 h-4" />
                   </Button>
                 </div>
               ) : (
-                <>
-                  {message.content && (
-                    <p className={`text-sm break-words ${message.file_url ? "" : "pr-12"}`}>
-                      {message.content}
-                    </p>
-                  )}
-                </>
+                message.content && (
+                  <p className="text-sm leading-snug break-words whitespace-pre-wrap min-w-0">
+                    {renderMessageText(message.content)}
+                  </p>
+                )
               )}
-              <span className={`absolute bottom-1 right-2 text-[10px] flex items-center gap-1 ${isOwn ? "text-primary-foreground/60" : "text-muted-foreground"}`}>
+              <span
+                className={`mt-1 flex items-center justify-end gap-1 text-[10px] ${
+                  isOwn ? "text-primary-foreground/70" : "text-muted-foreground"
+                }`}
+              >
                 {message.edited_at && <span className="italic">edited</span>}
-                {formattedTime}
-                {isOwn && <CheckCheck className={`w-3.5 h-3.5 ${readReceipts.length > 0 ? "text-sky-400" : "text-primary-foreground/40"}`} />}
+                <span>{formattedTime}</span>
+                {isOwn && (
+                  <CheckCheck
+                    className={`w-3.5 h-3.5 ${
+                      readReceipts.length > 0 ? "text-sky-400" : "text-primary-foreground/40"
+                    }`}
+                  />
+                )}
               </span>
             </div>
+
 
             {/* Reactions display */}
             {reactionGroups.length > 0 && (
