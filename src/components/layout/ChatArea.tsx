@@ -427,18 +427,17 @@ export function ChatArea({
               </p>
             </div>
           ) : (
-            <div className="chat-column space-y-2 sm:space-y-2.5">
+            <div className="chat-column">
               {messages.map((message, index) => {
                   const isOwnMessage = message.user_id === user?.id;
-                  const showAvatar =
-                    index === 0 || messages[index - 1]?.user_id !== message.user_id;
-                  const showName =
-                    !isOwnMessage &&
-                    (index === 0 || messages[index - 1]?.user_id !== message.user_id);
+                  const isGrouped =
+                    index > 0 && messages[index - 1]?.user_id === message.user_id;
+                  const showAvatar = !isGrouped;
+                  const showName = !isOwnMessage && !isGrouped;
 
                   return (
+                    <div key={message.id} className={isGrouped ? "mt-0.5" : "mt-3"}>
                     <MessageBubble
-                      key={message.id}
                       message={message}
                       isOwn={isOwnMessage}
                       showAvatar={showAvatar}
@@ -455,6 +454,7 @@ export function ChatArea({
                       isPinned={isMessagePinned(message.id)}
                       isAdmin={isAdmin}
                     />
+                    </div>
                   );
                 })}
               <div ref={messagesEndRef} />
