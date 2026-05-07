@@ -454,6 +454,7 @@ export function ChatArea({
                       isPinned={isMessagePinned(message.id)}
                       isAdmin={isAdmin}
                     />
+                    </div>
                   );
                 })}
               <div ref={messagesEndRef} />
