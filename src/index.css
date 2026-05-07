@@ -153,12 +153,17 @@
     @apply transition-all duration-200 hover:bg-accent/50;
   }
 
+  .chat-column {
+    @apply mx-auto w-full max-w-3xl xl:max-w-4xl;
+  }
+
   .chat-bubble {
-    @apply px-3 py-2 text-sm leading-snug shadow-sm;
+    @apply px-3 py-2 sm:px-3.5 sm:py-2.5 text-sm sm:text-[15px] leading-snug sm:leading-relaxed;
+    box-shadow: 0 1px 2px hsl(var(--foreground) / 0.06);
   }
 
   .message-bubble-own {
-    @apply chat-bubble bg-chat-own text-foreground rounded-2xl rounded-tr-sm;
+    @apply chat-bubble bg-chat-own text-foreground rounded-[1.125rem] rounded-br-md;
   }
 
   .dark .message-bubble-own {
@@ -166,7 +171,7 @@
   }
 
   .message-bubble-other {
-    @apply chat-bubble bg-chat-other text-foreground rounded-2xl rounded-tl-sm;
+    @apply chat-bubble bg-chat-other text-foreground rounded-[1.125rem] rounded-bl-md;
   }
 
   .emoji {
