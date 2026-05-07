@@ -281,7 +281,7 @@ export function ChatArea({
     <div className="flex-1 flex flex-col min-w-0 relative">
       {/* Header */}
       <header className="sticky top-0 z-20 bg-card/90 backdrop-blur-xl border-b border-border">
-        <div className="px-2 sm:px-4 h-14 sm:h-16 flex items-center justify-between gap-1">
+        <div className="chat-column px-2 sm:px-4 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-1">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
             <Button
               variant="ghost"
@@ -411,7 +411,7 @@ export function ChatArea({
           />
         )}
 
-        <ScrollArea className="flex-1 px-3 sm:px-4 py-3 relative z-10 overflow-x-hidden [&_[data-radix-scroll-area-viewport]>div]:!min-w-0" ref={scrollAreaRef}>
+        <ScrollArea className="flex-1 px-3 sm:px-6 lg:px-8 py-3 sm:py-4 relative z-10 overflow-x-hidden [&_[data-radix-scroll-area-viewport]>div]:!min-w-0" ref={scrollAreaRef}>
           {messagesLoading ? (
             <div className="flex items-center justify-center h-full">
               <div className="animate-pulse text-muted-foreground">Loading messages...</div>
@@ -427,7 +427,7 @@ export function ChatArea({
               </p>
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="chat-column space-y-2 sm:space-y-2.5">
               {messages.map((message, index) => {
                   const isOwnMessage = message.user_id === user?.id;
                   const showAvatar =
@@ -471,14 +471,16 @@ export function ChatArea({
 
         {/* Chat Input */}
         <div className="relative z-10 bg-card/80 backdrop-blur-sm border-t border-border">
-          {canSendMessages ? (
-            <ChatInput onSend={handleSendMessage} onTyping={startTyping} />
-          ) : (
-            <div className="p-4 flex items-center justify-center gap-2 text-muted-foreground">
-              <ShieldAlert className="w-5 h-5" />
-              <span className="text-sm">Only admins can send messages in this group</span>
-            </div>
-          )}
+          <div className="chat-column px-1 sm:px-4 lg:px-6">
+            {canSendMessages ? (
+              <ChatInput onSend={handleSendMessage} onTyping={startTyping} />
+            ) : (
+              <div className="p-4 flex items-center justify-center gap-2 text-muted-foreground">
+                <ShieldAlert className="w-5 h-5" />
+                <span className="text-sm">Only admins can send messages in this group</span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
