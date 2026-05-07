@@ -286,10 +286,10 @@ export function MessageBubble({
   if (isDeletedForEveryone) {
     return (
       <div
-        className={`flex gap-2 sm:gap-3 w-full ${isOwn ? "justify-end" : "justify-start"}`}
+        className={`flex gap-2 w-full items-end ${isOwn ? "justify-end" : "justify-start"}`}
       >
         {!isOwn && showAvatar && (
-          <Avatar className="w-8 h-8 shrink-0 mt-auto">
+          <Avatar className="w-8 h-8 shrink-0">
             {message.profile?.avatar_url ? (
               <AvatarImage src={message.profile.avatar_url} alt={message.profile.username} />
             ) : null}
@@ -299,9 +299,9 @@ export function MessageBubble({
           </Avatar>
         )}
         {!isOwn && !showAvatar && <div className="w-8 shrink-0" />}
-        <div className={`max-w-[78%] sm:max-w-[70%] md:max-w-[65%] lg:max-w-[60%] min-w-0 ${isOwn ? "items-end" : "items-start"}`}>
+        <div className={`max-w-[80%] sm:max-w-[68%] lg:max-w-[58%] min-w-0 ${isOwn ? "items-end" : "items-start"}`}>
           {showName && (
-            <p className="text-xs text-primary mb-1 ml-2 font-medium truncate">
+            <p className="text-xs text-primary mb-0.5 ml-1 font-medium truncate">
               {message.profile?.username || "Unknown"}
             </p>
           )}
@@ -309,7 +309,7 @@ export function MessageBubble({
             <p className="text-sm text-muted-foreground italic flex items-center gap-2">
               🚫 This message was deleted
             </p>
-            <span className="text-[10px] text-muted-foreground/60 block text-right mt-1">
+            <span className="text-[10px] text-muted-foreground/60 block text-right mt-0.5 leading-none">
               {formattedTime}
             </span>
           </div>
@@ -324,12 +324,12 @@ export function MessageBubble({
   return (
     <>
       <div
-        className={`flex gap-2 sm:gap-3 w-full ${isOwn ? "justify-end" : "justify-start"}`}
+        className={`flex gap-2 w-full items-end ${isOwn ? "justify-end" : "justify-start"}`}
         onMouseEnter={supportsHover ? () => setShowActions(true) : undefined}
         onMouseLeave={supportsHover ? () => setShowActions(false) : undefined}
       >
         {!isOwn && showAvatar && (
-          <Avatar className="w-8 h-8 shrink-0 mt-auto">
+          <Avatar className="w-8 h-8 shrink-0">
             {message.profile?.avatar_url ? (
               <AvatarImage src={message.profile.avatar_url} alt={message.profile.username} />
             ) : null}
@@ -340,11 +340,11 @@ export function MessageBubble({
         )}
         {!isOwn && !showAvatar && <div className="w-8 shrink-0" />}
         <div
-          className={`max-w-[78%] sm:max-w-[70%] md:max-w-[65%] lg:max-w-[60%] min-w-0 flex flex-col ${isOwn ? "items-end" : "items-start"}`}
+          className={`max-w-[80%] sm:max-w-[68%] lg:max-w-[58%] min-w-0 flex flex-col ${isOwn ? "items-end" : "items-start"}`}
           onClick={!supportsHover ? () => setShowActions((s) => !s) : undefined}
         >
           {showName && (
-            <p className="text-xs text-primary mb-1 ml-2 font-medium truncate">
+            <p className="text-xs text-primary mb-0.5 ml-1 font-medium truncate">
               {message.profile?.username || "Unknown"}
             </p>
           )}
@@ -469,7 +469,7 @@ export function MessageBubble({
                 )
               )}
               <span
-                className={`mt-1 flex items-center justify-end gap-1 text-[10px] sm:text-[11px] ${
+                className={`mt-0.5 flex items-center justify-end gap-1 text-[10px] leading-none ${
                   isOwn ? "text-primary-foreground/70" : "text-muted-foreground"
                 }`}
               >
@@ -477,7 +477,7 @@ export function MessageBubble({
                 <span>{formattedTime}</span>
                 {isOwn && (
                   <CheckCheck
-                    className={`w-3.5 h-3.5 ${
+                    className={`w-3 h-3 ${
                       readReceipts.length > 0 ? "text-sky-400" : "text-primary-foreground/40"
                     }`}
                   />
