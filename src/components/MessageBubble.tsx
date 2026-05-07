@@ -286,7 +286,7 @@ export function MessageBubble({
   if (isDeletedForEveryone) {
     return (
       <div
-        className={`flex gap-2 w-full ${isOwn ? "justify-end" : "justify-start"}`}
+        className={`flex gap-2 sm:gap-3 w-full ${isOwn ? "justify-end" : "justify-start"}`}
       >
         {!isOwn && showAvatar && (
           <Avatar className="w-8 h-8 shrink-0 mt-auto">
@@ -299,7 +299,7 @@ export function MessageBubble({
           </Avatar>
         )}
         {!isOwn && !showAvatar && <div className="w-8 shrink-0" />}
-        <div className={`max-w-[85%] sm:max-w-[75%] min-w-0 ${isOwn ? "items-end" : "items-start"}`}>
+        <div className={`max-w-[78%] sm:max-w-[70%] md:max-w-[65%] lg:max-w-[60%] min-w-0 ${isOwn ? "items-end" : "items-start"}`}>
           {showName && (
             <p className="text-xs text-primary mb-1 ml-2 font-medium truncate">
               {message.profile?.username || "Unknown"}
@@ -324,7 +324,7 @@ export function MessageBubble({
   return (
     <>
       <div
-        className={`flex gap-2 w-full ${isOwn ? "justify-end" : "justify-start"}`}
+        className={`flex gap-2 sm:gap-3 w-full ${isOwn ? "justify-end" : "justify-start"}`}
         onMouseEnter={supportsHover ? () => setShowActions(true) : undefined}
         onMouseLeave={supportsHover ? () => setShowActions(false) : undefined}
       >
@@ -340,7 +340,7 @@ export function MessageBubble({
         )}
         {!isOwn && !showAvatar && <div className="w-8 shrink-0" />}
         <div
-          className={`max-w-[85%] sm:max-w-[75%] min-w-0 flex flex-col ${isOwn ? "items-end" : "items-start"}`}
+          className={`max-w-[78%] sm:max-w-[70%] md:max-w-[65%] lg:max-w-[60%] min-w-0 flex flex-col ${isOwn ? "items-end" : "items-start"}`}
           onClick={!supportsHover ? () => setShowActions((s) => !s) : undefined}
         >
           {showName && (
@@ -463,13 +463,13 @@ export function MessageBubble({
                 </div>
               ) : (
                 message.content && (
-                  <p className="text-sm leading-snug break-words whitespace-pre-wrap min-w-0">
+                  <p className="text-sm sm:text-[15px] leading-snug sm:leading-relaxed break-words whitespace-pre-wrap min-w-0">
                     {renderMessageText(message.content)}
                   </p>
                 )
               )}
               <span
-                className={`mt-1 flex items-center justify-end gap-1 text-[10px] ${
+                className={`mt-1 flex items-center justify-end gap-1 text-[10px] sm:text-[11px] ${
                   isOwn ? "text-primary-foreground/70" : "text-muted-foreground"
                 }`}
               >
