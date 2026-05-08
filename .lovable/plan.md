@@ -1,34 +1,328 @@
-## Goal
+## Master Plan: Fix chat width, grouped alignment, and typing indicator
 
-Make the chat feed denser and more visually consistent: less vertical gap between messages, tight grouping of consecutive messages from the same sender, balanced left/right alignment, and a fixed avatar gutter so all bubbles line up cleanly.
+### Goal
 
-## Plain explanation
+Make the React chat UI render correctly across long chat histories and all screen sizes by ensuring:
 
-Right now consecutive messages have the same large vertical gap as new-sender messages, the avatar slot/gap differs slightly between mobile and desktop, and bubble padding feels loose. We will:
-- Use a smaller gap when the next message is from the same sender (grouped), and a slightly larger gap when the sender changes.
-- Lock the avatar column to one fixed width and one fixed gap so own and other messages align identically on both sides.
-- Trim bubble padding and the meta (time/check) row so bubbles look compact without clipping.
+- the chat column scales responsively without feeling cramped on large screens,
+- grouped messages keep identical left alignment for avatar, name, and bubble,
+- the typing indicator appears as a real chat-stream item, not only as a header subtitle,
+- deleted-message and grouped-message variants follow the same layout rules,
+- no existing behavior, hooks, or data flow is broken.
 
-## Changes
+---
 
-### 1. `src/components/layout/ChatArea.tsx` (message list spacing)
-- Replace `<div className="chat-column space-y-2 sm:space-y-2.5">` with a plain `<div className="chat-column">` (remove `space-y-*`).
-- In the `messages.map(...)`, compute `isGrouped = index > 0 && messages[index - 1]?.user_id === message.user_id` (same sender as previous).
-- Wrap each `<MessageBubble />` in a `<div className={isGrouped ? "mt-0.5" : "mt-3"}>` so grouped messages sit tight (~2px) and new-sender blocks get a clear ~12px break.
-- Pass `isGrouped` down so the bubble can hide its avatar/name correctly (already handled via `showAvatar` / `showName`, no API change needed).
+## Non-negotiable rules
 
-### 2. `src/components/MessageBubble.tsx` (alignment, avatar gutter, compact bubble)
-- Outer row: change `flex gap-2 sm:gap-3 w-full` to `flex gap-2 w-full items-end` for both the normal and the deleted-placeholder branches. One fixed gap at every breakpoint = symmetrical left/right alignment.
-- Avatar slot: keep `Avatar` at `w-8 h-8 shrink-0` but drop `mt-auto` (replaced by row-level `items-end`). The empty placeholder stays `<div className="w-8 shrink-0" />` so grouped messages still indent to the same column.
-- Bubble width clamp: change `max-w-[78%] sm:max-w-[70%] md:max-w-[65%] lg:max-w-[60%]` to `max-w-[80%] sm:max-w-[68%] lg:max-w-[58%]` on both the deleted and normal containers (one consistent scale).
-- Sender name above bubble: change `mb-1 ml-2` to `mb-0.5 ml-1` to tighten the header.
-- Meta row (time + ticks): change `mt-1 ... text-[10px] sm:text-[11px]` to `mt-0.5 ... text-[10px] leading-none`, and reduce icon size `w-3.5 h-3.5` → `w-3 h-3` for `CheckCheck`. Keeps it compact and aligned.
+1. Use one shared layout structure for all left-side message states:
+  - normal message,
+  - grouped continuation,
+  - deleted message,
+  - typing indicator.
+2. Do not “fix” alignment with one-off spacing tweaks in only one branch.  
+All branches must share the same structural alignment logic.
+3. Do not change business logic unless it is required for rendering the typing bubble safely.
+4. Preserve current scroll behavior unless it causes the typing bubble to misbehave.
 
-### 3. `src/index.css` (compact, evenly padded bubbles)
-- `.chat-bubble`: change padding from `px-3 py-2 sm:px-3.5 sm:py-2.5` to `px-3 py-1.5 sm:px-3.5 sm:py-2`. Keep `text-sm sm:text-[15px] leading-snug sm:leading-relaxed` and the existing `box-shadow`.
-- `.message-bubble-own` / `.message-bubble-other`: keep `rounded-[1.125rem] rounded-br-md` / `rounded-bl-md`. No color/shadow changes.
+---
 
-## Out of scope
-- No changes to message data flow, hooks, RLS, edge functions, auth, or `ChatInput`.
-- No new files. No dependency changes.
-- No restructuring of grouping logic beyond the `isGrouped` margin toggle in `ChatArea.tsx`.
+## Implementation steps
+
+### 1. `src/index.css` — make the chat column truly responsive
+
+Update `.chat-column` so the conversation area grows naturally from mobile to ultrawide screens.
+
+Use a responsive max-width ladder, not a single hard cap:
+
+```
+
+```
+
+```
+.chat-column {
+  @apply mx-auto w-full max-w-full sm:max-w-2xl md:max-w-3xl lg:max-w-4xl xl:max-w-5xl 2xl:max-w-6xl;
+}
+```
+
+### What this must achieve
+
+-   
+Mobile stays readable and edge-to-edge within existing parent padding.  
+
+-   
+Tablet expands smoothly.  
+
+-   
+Desktop no longer feels pinched.  
+
+-   
+Ultrawide screens still stay visually centered and controlled.  
+
+
+---
+
+### 2. `src/components/MessageBubble.tsx` — normalize grouped-row alignment
+
+Refactor the message row so the following elements always align from the same left origin:
+
+-   
+avatar slot,  
+
+-   
+avatar placeholder slot,  
+
+-   
+username label,  
+
+-   
+bubble container,  
+
+-   
+deleted-message variant.  
+
+
+#### Required behavior
+
+-   
+The avatar and placeholder must have identical fixed sizing.  
+
+-   
+The gap between avatar and bubble must be identical in every branch.  
+
+-   
+The username label must be positioned relative to the same bubble start point, not by a special-case offset.  
+
+-   
+Grouped continuation rows must preserve the same horizontal anchor as the first message in the group.  
+
+
+#### Practical rule
+
+Do not solve alignment by adding extra one-off margins like `ml-1` unless they are proven necessary after the shared row structure is fixed.
+
+#### Bubble width
+
+Use a responsive max-width ladder that stays proportional to the wider chat column:
+
+```
+
+```
+
+```
+normal:   max-w-[85%]
+sm:       max-w-[75%]
+md:       max-w-[68%]
+lg:       max-w-[60%]
+xl:       max-w-[55%]
+```
+
+Apply the same width logic to:
+
+-   
+regular messages,  
+
+-   
+grouped messages,  
+
+-   
+deleted-message bubbles.  
+
+
+#### Layout principle
+
+Every message variant should render inside the same row scaffold whenever possible. Differences should be visual, not structural.
+
+---
+
+### 3. `src/components/layout/ChatArea.tsx` — render typing as a chat-stream bubble
+
+Add a typing indicator row inside the messages list, directly above the sentinel element:
+
+```
+
+```
+
+```
+<div ref={messagesEndRef} />
+```
+
+#### Typing bubble requirements
+
+-   
+Show only when `typingUsers.length > 0`.  
+
+-   
+Render as a left-aligned chat row.  
+
+-   
+Use the same row structure as messages so it aligns with avatar and bubbles.  
+
+-   
+Include:  
+
+  -   
+  an avatar or avatar placeholder for the first typing user,  
+
+  -   
+  a bubble with animated dots,  
+
+  -   
+  matching spacing to the message rows.  
+
+
+#### Important behavior
+
+-   
+Keep the existing header subtitle typing text unless there is a reason to remove it.  
+
+-   
+The in-stream typing bubble is the real visual indicator in the conversation.  
+
+-   
+The existing auto-scroll logic should still bring the new typing row into view when it appears.  
+
+
+#### Animation
+
+Use a subtle dot animation, not a noisy or distracting effect:
+
+-   
+3 dots,  
+
+-   
+staggered timing,  
+
+-   
+compact pill bubble,  
+
+-   
+consistent with the rest of the chat theme.  
+
+
+---
+
+### 4. Keep deleted-message layout consistent
+
+Deleted messages often break alignment because they are handled as a separate branch.
+
+Make sure deleted messages:
+
+-   
+use the same row scaffold,  
+
+-   
+preserve the same left anchor,  
+
+-   
+use the same gap and bubble width rules,  
+
+-   
+do not create a visual “jump” in grouped histories.  
+
+
+---
+
+### 5. Regression checks
+
+After changes, verify these cases manually:
+
+#### Layout
+
+-   
+320px mobile width  
+
+-   
+small phone width  
+
+-   
+tablet width  
+
+-   
+1214px desktop  
+
+-   
+ultrawide display  
+
+
+#### Message states
+
+-   
+first message in a group  
+
+-   
+continued grouped message  
+
+-   
+deleted message  
+
+-   
+long message text  
+
+-   
+mixed avatar / no-avatar states if supported  
+
+
+#### Typing state
+
+-   
+no typing users  
+
+-   
+one typing user  
+
+-   
+multiple typing users  
+
+-   
+typing indicator visible after scrolling  
+
+-   
+typing indicator not overlapping the last message  
+
+
+---
+
+## Acceptance criteria
+
+The fix is complete only when all of these are true:
+
+1.   
+The chat column no longer looks narrow on large desktop screens.  
+
+2.   
+Grouped messages keep pixel-consistent alignment across long histories.  
+
+3.   
+The username sits directly above the first bubble in a grouped block.  
+
+4.   
+Deleted messages match the same horizontal layout rules as normal messages.  
+
+5.   
+The typing indicator appears in the message stream and is aligned like a real chat bubble.  
+
+6.   
+The UI still works correctly on small screens.  
+
+7.   
+No extra business logic, dependencies, or unrelated file changes were introduced.  
+
+
+---
+
+## Files to edit
+
+- `src/index.css`  
+
+- `src/components/MessageBubble.tsx`  
+
+- `src/components/layout/ChatArea.tsx`  
+
+
+---
+
+## Final implementation rule
+
+Prefer one shared layout system over multiple branch-specific offsets.  
+  
+That is what makes the output stable across long histories and all screen sizes.
