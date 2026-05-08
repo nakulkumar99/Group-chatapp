@@ -457,6 +457,20 @@ export function ChatArea({
                     </div>
                   );
                 })}
+              {typingUsers.length > 0 && (
+                <div className="mt-3 flex gap-2 w-full items-end justify-start">
+                  <Avatar className="w-8 h-8 shrink-0">
+                    <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                      {getInitials(typingUsers[0].username || "U")}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="message-bubble-other px-3 py-2 rounded-2xl flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce [animation-delay:-0.3s]" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce [animation-delay:-0.15s]" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce" />
+                  </div>
+                </div>
+              )}
               <div ref={messagesEndRef} />
             </div>
           )}
