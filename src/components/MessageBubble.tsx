@@ -105,8 +105,9 @@ export function MessageBubble({
   // Check if message is deleted for everyone
   const isDeletedForEveryone = message.deleted_at && message.deleted_for_everyone;
 
-  // Keep actions visible when dropdown is open
-  const actionsVisible = showActions || dropdownOpen;
+  // On touch devices show actions persistently; on hover devices, on hover or when dropdown is open
+  const supportsHover = typeof window !== "undefined" && window.matchMedia("(hover: hover)").matches;
+  const actionsVisible = !supportsHover || showActions || dropdownOpen;
 
   const getInitials = (name: string) => {
     return name
