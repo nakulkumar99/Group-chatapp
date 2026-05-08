@@ -340,7 +340,7 @@ export function MessageBubble({
         )}
         {!isOwn && !showAvatar && <div className="w-8 shrink-0" />}
         <div
-          className={`max-w-[80%] sm:max-w-[68%] lg:max-w-[58%] min-w-0 flex flex-col ${isOwn ? "items-end" : "items-start"}`}
+          className={`max-w-[85%] sm:max-w-[75%] md:max-w-[68%] lg:max-w-[60%] xl:max-w-[55%] min-w-0 flex flex-col ${isOwn ? "items-end" : "items-start"}`}
           onClick={!supportsHover ? () => setShowActions((s) => !s) : undefined}
         >
           {showName && (
