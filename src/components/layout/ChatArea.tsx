@@ -281,7 +281,7 @@ export function ChatArea({
     <div className="flex-1 flex flex-col min-w-0 relative">
       {/* Header */}
       <header className="sticky top-0 z-20 bg-card/90 backdrop-blur-xl border-b border-border">
-        <div className="chat-column px-2 sm:px-4 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-1">
+        <div className="px-2 sm:px-4 h-14 sm:h-16 flex items-center justify-between gap-1">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
             <Button
               variant="ghost"
@@ -411,7 +411,7 @@ export function ChatArea({
           />
         )}
 
-        <ScrollArea className="flex-1 px-3 sm:px-6 lg:px-8 py-3 sm:py-4 relative z-10 overflow-x-hidden [&_[data-radix-scroll-area-viewport]>div]:!min-w-0" ref={scrollAreaRef}>
+        <ScrollArea className="flex-1 p-4 relative z-10" ref={scrollAreaRef}>
           {messagesLoading ? (
             <div className="flex items-center justify-center h-full">
               <div className="animate-pulse text-muted-foreground">Loading messages...</div>
@@ -427,17 +427,18 @@ export function ChatArea({
               </p>
             </div>
           ) : (
-            <div className="chat-column">
+            <div className="space-y-2">
               {messages.map((message, index) => {
                   const isOwnMessage = message.user_id === user?.id;
-                  const isGrouped =
-                    index > 0 && messages[index - 1]?.user_id === message.user_id;
-                  const showAvatar = !isGrouped;
-                  const showName = !isOwnMessage && !isGrouped;
+                  const showAvatar =
+                    index === 0 || messages[index - 1]?.user_id !== message.user_id;
+                  const showName =
+                    !isOwnMessage &&
+                    (index === 0 || messages[index - 1]?.user_id !== message.user_id);
 
                   return (
-                    <div key={message.id} className={isGrouped ? "mt-0.5" : "mt-3"}>
                     <MessageBubble
+                      key={message.id}
                       message={message}
                       isOwn={isOwnMessage}
                       showAvatar={showAvatar}
@@ -454,23 +455,8 @@ export function ChatArea({
                       isPinned={isMessagePinned(message.id)}
                       isAdmin={isAdmin}
                     />
-                    </div>
                   );
                 })}
-              {typingUsers.length > 0 && (
-                <div className="mt-3 flex gap-2 w-full items-end justify-start">
-                  <Avatar className="w-8 h-8 shrink-0">
-                    <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                      {getInitials(typingUsers[0].username || "U")}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="message-bubble-other px-3 py-2 rounded-2xl flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce [animation-delay:-0.3s]" />
-                    <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce [animation-delay:-0.15s]" />
-                    <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce" />
-                  </div>
-                </div>
-              )}
               <div ref={messagesEndRef} />
             </div>
           )}
@@ -485,16 +471,14 @@ export function ChatArea({
 
         {/* Chat Input */}
         <div className="relative z-10 bg-card/80 backdrop-blur-sm border-t border-border">
-          <div className="chat-column px-1 sm:px-4 lg:px-6">
-            {canSendMessages ? (
-              <ChatInput onSend={handleSendMessage} onTyping={startTyping} />
-            ) : (
-              <div className="p-4 flex items-center justify-center gap-2 text-muted-foreground">
-                <ShieldAlert className="w-5 h-5" />
-                <span className="text-sm">Only admins can send messages in this group</span>
-              </div>
-            )}
-          </div>
+          {canSendMessages ? (
+            <ChatInput onSend={handleSendMessage} onTyping={startTyping} />
+          ) : (
+            <div className="p-4 flex items-center justify-center gap-2 text-muted-foreground">
+              <ShieldAlert className="w-5 h-5" />
+              <span className="text-sm">Only admins can send messages in this group</span>
+            </div>
+          )}
         </div>
       </div>
 

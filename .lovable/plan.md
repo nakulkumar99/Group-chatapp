@@ -1,30 +1,37 @@
-# Fix Chat Area Right-Side Empty Gap
+## Explanation
 
-## Problem
-The chat column is centered with a max-width ladder (`max-w-2xl … 2xl:max-w-6xl` + `mx-auto`). On wide screens this leaves a large empty area on the right side of the messages list (visible as the yellow lines in the screenshot), while the left edge starts where avatars/usernames sit. The user wants the chat to fill the full available width with consistent right padding.
+On mobile (≤390px), the chat header packs too much into one row: back button + avatar + group info on the left, and up to 5 action icons (KeyRound, ShieldCheck, Users, Settings, MoreVertical) on the right. Each icon button is 40×40 with `px-4` outer padding and `gap-3` on the left, so the right-side icons get squeezed, clipped, or pushed off-screen, and the title gets crowded.
+
+The fix is purely CSS/Flexbox — tighten spacing, shrink icon buttons on small screens, allow the title block to flex/shrink, and prevent the right-side group from shrinking so icons stay visible.
 
 ## Changes
 
-### 1. `src/index.css` — `.chat-column`
-Replace the centered max-width ladder with a full-width container that only adds horizontal padding, so messages span the entire chat area edge-to-edge:
+**File: `src/components/layout/ChatArea.tsx`** (header block, lines ~283–392)
 
-- Before: `mx-auto w-full max-w-full sm:max-w-2xl md:max-w-3xl lg:max-w-4xl xl:max-w-5xl 2xl:max-w-6xl`
-- After: `w-full max-w-none`
+1. Header container — reduce horizontal padding on mobile:
+   - `px-4 h-16` → `px-2 sm:px-4 h-14 sm:h-16`
 
-This removes the centering cap that creates the right-side gap. The existing `px-*` padding on each `chat-column` usage already handles left/right spacing.
+2. Left group — tighter gap on mobile, allow shrink:
+   - `flex items-center gap-3` → `flex items-center gap-2 sm:gap-3 min-w-0 flex-1`
 
-### 2. `src/components/MessageBubble.tsx`
-Keep bubbles from stretching across the now-wider container by tightening the per-bubble max-width ladder so own/other bubbles still look balanced and compact:
+3. Avatar — slightly smaller on mobile, prevent shrink:
+   - `w-10 h-10 border-2 border-primary/30` → `w-9 h-9 sm:w-10 sm:h-10 border-2 border-primary/30 shrink-0`
 
-- Both branches (line 302 and line 343): change
-  `max-w-[85%] sm:max-w-[75%] md:max-w-[68%] lg:max-w-[60%] xl:max-w-[55%]`
-  to
-  `max-w-[85%] sm:max-w-[70%] md:max-w-[60%] lg:max-w-[50%] xl:max-w-[45%]`
+4. Back button — smaller touch target on mobile but still ≥40px:
+   - `min-w-[40px] min-h-[40px]` → `min-w-[40px] min-h-[40px] h-10 w-10 sm:h-10 sm:w-10 shrink-0`
 
-This keeps individual bubble widths comfortable while the row itself fills the full chat width, eliminating the right-side empty gap shown in the screenshot.
+5. Right icon group — prevent shrink, tighten gap:
+   - `flex items-center gap-1` → `flex items-center gap-0.5 sm:gap-1 shrink-0`
 
-### 3. `src/components/layout/ChatArea.tsx`
-No structural change. Verify the three `chat-column` usages (header line 284, messages line 430, input line 488) keep their existing `px-*` padding so left and right padding stay consistent.
+6. All right-side icon `<Button size="icon">` elements — make them compact on mobile:
+   - Add `h-9 w-9 sm:h-10 sm:w-10` to each of the 5 buttons (KeyRound, ShieldCheck, Users, Settings, MoreVertical)
+   - Icons stay `w-5 h-5`
 
-## Out of scope
-- No changes to message grouping, avatars, typing indicator, colors, or any backend/business logic.
+7. Title `<h1>` — keep `truncate` but ensure parent has `min-w-0` (already added in step 2).
+
+No new dependencies, no new files, no logic changes — pure responsive CSS via Tailwind utilities.
+
+## Result
+
+- Mobile (≤640px): compact 56px header, 36px icon buttons with 2px gaps — all 5 right-side icons fit on a 360–390px viewport without overflow or clipping.
+- Desktop (≥640px): unchanged appearance (64px header, 40px buttons, original gaps).

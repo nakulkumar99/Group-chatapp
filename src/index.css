@@ -153,17 +153,8 @@
     @apply transition-all duration-200 hover:bg-accent/50;
   }
 
-  .chat-column {
-    @apply w-full max-w-none;
-  }
-
-  .chat-bubble {
-    @apply px-3 py-1.5 sm:px-3.5 sm:py-2 text-sm sm:text-[15px] leading-snug sm:leading-relaxed;
-    box-shadow: 0 1px 2px hsl(var(--foreground) / 0.06);
-  }
-
   .message-bubble-own {
-    @apply chat-bubble bg-chat-own text-foreground rounded-[1.125rem] rounded-br-md;
+    @apply bg-chat-own text-foreground rounded-2xl rounded-tr-sm shadow-sm;
   }
 
   .dark .message-bubble-own {
@@ -171,13 +162,7 @@
   }
 
   .message-bubble-other {
-    @apply chat-bubble bg-chat-other text-foreground rounded-[1.125rem] rounded-bl-md;
-  }
-
-  .emoji {
-    font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Twemoji Mozilla", sans-serif;
-    line-height: 1;
-    font-style: normal;
+    @apply bg-chat-other text-foreground rounded-2xl rounded-tl-sm shadow-sm;
   }
 
   .typing-indicator {

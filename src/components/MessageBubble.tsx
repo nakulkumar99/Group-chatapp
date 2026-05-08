@@ -1,7 +1,6 @@
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { useSignedUrl } from "@/hooks/useSignedUrl";
-import { renderMessageText } from "@/lib/renderMessageText";
 import { CheckCheck, Download, FileText, Play, Image as ImageIcon, X, Pencil, Check, Pin, Trash2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -286,10 +285,10 @@ export function MessageBubble({
   if (isDeletedForEveryone) {
     return (
       <div
-        className={`flex gap-2 w-full items-end ${isOwn ? "justify-end" : "justify-start"}`}
+        className={`flex gap-2 ${isOwn ? "justify-end" : "justify-start"}`}
       >
         {!isOwn && showAvatar && (
-          <Avatar className="w-8 h-8 shrink-0">
+          <Avatar className="w-8 h-8 shrink-0 mt-auto">
             {message.profile?.avatar_url ? (
               <AvatarImage src={message.profile.avatar_url} alt={message.profile.username} />
             ) : null}
@@ -299,17 +298,19 @@ export function MessageBubble({
           </Avatar>
         )}
         {!isOwn && !showAvatar && <div className="w-8 shrink-0" />}
-        <div className={`max-w-[85%] sm:max-w-[70%] md:max-w-[60%] lg:max-w-[50%] xl:max-w-[45%] min-w-0 ${isOwn ? "items-end" : "items-start"}`}>
+        <div className={`max-w-[75%] ${isOwn ? "items-end" : "items-start"}`}>
           {showName && (
-            <p className="text-xs text-primary mb-0.5 ml-1 font-medium truncate">
+            <p className="text-xs text-primary mb-1 ml-2 font-medium">
               {message.profile?.username || "Unknown"}
             </p>
           )}
-          <div className="px-3 py-2 rounded-2xl border border-border bg-muted/30">
+          <div
+            className={`px-3 py-2 rounded-2xl border border-border bg-muted/30`}
+          >
             <p className="text-sm text-muted-foreground italic flex items-center gap-2">
               🚫 This message was deleted
             </p>
-            <span className="text-[10px] text-muted-foreground/60 block text-right mt-0.5 leading-none">
+            <span className="text-[10px] text-muted-foreground/60 block text-right mt-1">
               {formattedTime}
             </span>
           </div>
@@ -324,12 +325,12 @@ export function MessageBubble({
   return (
     <>
       <div
-        className={`flex gap-2 w-full items-end ${isOwn ? "justify-end" : "justify-start"}`}
+        className={`flex gap-2 ${isOwn ? "justify-end" : "justify-start"}`}
         onMouseEnter={supportsHover ? () => setShowActions(true) : undefined}
         onMouseLeave={supportsHover ? () => setShowActions(false) : undefined}
       >
         {!isOwn && showAvatar && (
-          <Avatar className="w-8 h-8 shrink-0">
+          <Avatar className="w-8 h-8 shrink-0 mt-auto">
             {message.profile?.avatar_url ? (
               <AvatarImage src={message.profile.avatar_url} alt={message.profile.username} />
             ) : null}
@@ -339,12 +340,9 @@ export function MessageBubble({
           </Avatar>
         )}
         {!isOwn && !showAvatar && <div className="w-8 shrink-0" />}
-        <div
-          className={`max-w-[85%] sm:max-w-[70%] md:max-w-[60%] lg:max-w-[50%] xl:max-w-[45%] min-w-0 flex flex-col ${isOwn ? "items-end" : "items-start"}`}
-          onClick={!supportsHover ? () => setShowActions((s) => !s) : undefined}
-        >
+        <div className={`max-w-[75%] ${isOwn ? "items-end" : "items-start"}`}>
           {showName && (
-            <p className="text-xs text-primary mb-0.5 ml-1 font-medium truncate">
+            <p className="text-xs text-primary mb-1 ml-2 font-medium">
               {message.profile?.username || "Unknown"}
             </p>
           )}
@@ -354,8 +352,8 @@ export function MessageBubble({
               <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className={`absolute -top-9 z-20 flex items-center gap-1 rounded-full border border-border bg-popover px-1 py-0.5 shadow-md ${
-                  isOwn ? "right-0" : "left-0"
+                className={`absolute top-0 flex items-center gap-1 z-20 ${
+                  isOwn ? "-left-28" : "-right-28"
                 }`}
               >
                 {onReact && (
@@ -430,7 +428,7 @@ export function MessageBubble({
             )}
 
             <div
-              className={`relative min-w-0 ${
+              className={`px-3 py-2 relative ${
                 isOwn ? "message-bubble-own" : "message-bubble-other"
               }`}
             >
@@ -447,44 +445,35 @@ export function MessageBubble({
                   <Input
                     value={editContent}
                     onChange={(e) => setEditContent(e.target.value)}
-                    className="text-sm bg-transparent border-border text-inherit h-8 min-w-0"
+                    className="text-sm bg-transparent border-border text-inherit h-8"
                     autoFocus
                     onKeyDown={(e) => {
                       if (e.key === "Enter") handleSaveEdit();
                       if (e.key === "Escape") handleCancelEdit();
                     }}
                   />
-                  <Button size="icon" variant="ghost" aria-label="Save edit" className="h-7 w-7 shrink-0" onClick={handleSaveEdit}>
+                  <Button size="icon" variant="ghost" className="h-6 w-6" onClick={handleSaveEdit}>
                     <Check className="w-4 h-4" />
                   </Button>
-                  <Button size="icon" variant="ghost" aria-label="Cancel edit" className="h-7 w-7 shrink-0" onClick={handleCancelEdit}>
+                  <Button size="icon" variant="ghost" className="h-6 w-6" onClick={handleCancelEdit}>
                     <X className="w-4 h-4" />
                   </Button>
                 </div>
               ) : (
-                message.content && (
-                  <p className="text-sm sm:text-[15px] leading-snug sm:leading-relaxed break-words whitespace-pre-wrap min-w-0">
-                    {renderMessageText(message.content)}
-                  </p>
-                )
+                <>
+                  {message.content && (
+                    <p className={`text-sm break-words ${message.file_url ? "" : "pr-12"}`}>
+                      {message.content}
+                    </p>
+                  )}
+                </>
               )}
-              <span
-                className={`mt-0.5 flex items-center justify-end gap-1 text-[10px] leading-none ${
-                  isOwn ? "text-primary-foreground/70" : "text-muted-foreground"
-                }`}
-              >
+              <span className={`absolute bottom-1 right-2 text-[10px] flex items-center gap-1 ${isOwn ? "text-primary-foreground/60" : "text-muted-foreground"}`}>
                 {message.edited_at && <span className="italic">edited</span>}
-                <span>{formattedTime}</span>
-                {isOwn && (
-                  <CheckCheck
-                    className={`w-3 h-3 ${
-                      readReceipts.length > 0 ? "text-sky-400" : "text-primary-foreground/40"
-                    }`}
-                  />
-                )}
+                {formattedTime}
+                {isOwn && <CheckCheck className={`w-3.5 h-3.5 ${readReceipts.length > 0 ? "text-sky-400" : "text-primary-foreground/40"}`} />}
               </span>
             </div>
-
 
             {/* Reactions display */}
             {reactionGroups.length > 0 && (

@@ -124,13 +124,13 @@ export function ChatInput({ onSend, onTyping, disabled }: ChatInputProps) {
   const isSubmitDisabled = sending || uploading || disabled || (!message.trim() && !selectedFile);
 
   return (
-    <div className="px-2 py-2 sm:px-3 sm:py-3 bg-transparent" style={{ paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))" }}>
+    <div className="p-3 bg-transparent">
       {/* File Preview */}
       {selectedFile && (
-        <div className="mb-2">
-          <div className="bg-[hsl(203,23%,18%)] rounded-xl p-3 flex items-center gap-3 w-full max-w-full">
+        <div className="mb-3 px-2">
+          <div className="bg-[hsl(203,23%,18%)] rounded-xl p-3 flex items-center gap-3 max-w-sm">
             {previewUrl && isImage ? (
-              <div className="relative w-14 h-14 rounded-lg overflow-hidden shrink-0">
+              <div className="relative w-16 h-16 rounded-lg overflow-hidden shrink-0">
                 <img
                   src={previewUrl}
                   alt="Preview"
@@ -180,11 +180,7 @@ export function ChatInput({ onSend, onTyping, disabled }: ChatInputProps) {
             voiceRecorder={voiceRecorder}
           />
         ) : (
-          <form
-            key="text-input"
-            onSubmit={handleSubmit}
-            className="grid grid-cols-[auto_1fr_auto] items-center gap-2"
-          >
+          <form key="text-input" onSubmit={handleSubmit} className="flex gap-2 items-center">
             {/* File Attachment Button */}
             <input
               ref={fileInputRef}
@@ -197,8 +193,7 @@ export function ChatInput({ onSend, onTyping, disabled }: ChatInputProps) {
               type="button"
               variant="ghost"
               size="icon"
-              aria-label="Attach file"
-              className="h-11 w-11 rounded-full hover:bg-accent text-muted-foreground shrink-0"
+              className="h-11 w-11 rounded-full hover:bg-accent text-muted-foreground"
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading || sending}
             >
@@ -210,33 +205,33 @@ export function ChatInput({ onSend, onTyping, disabled }: ChatInputProps) {
               value={message}
               onChange={handleInputChange}
               placeholder="Type a message"
-              className="w-full min-w-0 h-11 rounded-full bg-muted border-0 focus:ring-1 focus:ring-primary px-4 text-base"
+              className="flex-1 h-11 rounded-full bg-muted border-0 focus:ring-1 focus:ring-primary px-4"
               maxLength={1000}
               disabled={uploading || sending}
             />
 
-            {/* Right slot: reserved fixed size, swaps mic <-> send in place */}
-            <div className="h-11 w-11 shrink-0 flex items-center justify-center">
-              {message.trim() || selectedFile ? (
-                <Button
-                  type="submit"
-                  aria-label="Send message"
-                  disabled={isSubmitDisabled}
-                  className="h-11 w-11 rounded-full bg-primary hover:bg-primary/90 p-0 shadow-lg disabled:opacity-50"
-                >
-                  {uploading || sending ? (
-                    <Loader2 className="w-5 h-5 text-primary-foreground animate-spin" />
-                  ) : (
-                    <Send className="w-5 h-5 text-primary-foreground" />
-                  )}
-                </Button>
-              ) : (
-                <VoiceRecorderButton
-                  onClick={handleMicClick}
-                  disabled={uploading || sending || disabled}
-                />
-              )}
-            </div>
+            {/* Voice Recording Button - show when no text */}
+            {!message.trim() && !selectedFile && (
+              <VoiceRecorderButton
+                onClick={handleMicClick}
+                disabled={uploading || sending || disabled}
+              />
+            )}
+
+            {/* Send Button */}
+            {(message.trim() || selectedFile) && (
+              <Button
+                type="submit"
+                disabled={isSubmitDisabled}
+                className="h-11 w-11 rounded-full bg-primary hover:bg-primary/90 p-0 shadow-lg disabled:opacity-50"
+              >
+                {uploading || sending ? (
+                  <Loader2 className="w-5 h-5 text-primary-foreground animate-spin" />
+                ) : (
+                  <Send className="w-5 h-5 text-primary-foreground" />
+                )}
+              </Button>
+            )}
           </form>
         )}
       </AnimatePresence>

@@ -108,13 +108,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    if (newRole === "admin" && !isGroupCreator) {
-      return new Response(
-        JSON.stringify({ error: "Only the group creator can assign the admin role" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
     if (targetUserId === group.created_by) {
       return new Response(
         JSON.stringify({ error: "Cannot change the group owner's role" }),
