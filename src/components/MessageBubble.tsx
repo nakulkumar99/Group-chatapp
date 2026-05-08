@@ -105,9 +105,8 @@ export function MessageBubble({
   // Check if message is deleted for everyone
   const isDeletedForEveryone = message.deleted_at && message.deleted_for_everyone;
 
-  // On touch devices show actions persistently; on hover devices, on hover or when dropdown is open
-  const supportsHover = typeof window !== "undefined" && window.matchMedia("(hover: hover)").matches;
-  const actionsVisible = !supportsHover || showActions || dropdownOpen;
+  // Keep actions visible when dropdown is open
+  const actionsVisible = showActions || dropdownOpen;
 
   const getInitials = (name: string) => {
     return name
@@ -320,7 +319,8 @@ export function MessageBubble({
     );
   }
 
-
+  // Only use hover handlers on devices that support hover
+  const supportsHover = typeof window !== "undefined" && window.matchMedia("(hover: hover)").matches;
 
   return (
     <>
@@ -340,22 +340,20 @@ export function MessageBubble({
           </Avatar>
         )}
         {!isOwn && !showAvatar && <div className="w-8 shrink-0" />}
-        <div className={`max-w-[75%] min-w-0 ${isOwn ? "items-end" : "items-start"}`}>
+        <div className={`max-w-[75%] ${isOwn ? "items-end" : "items-start"}`}>
           {showName && (
             <p className="text-xs text-primary mb-1 ml-2 font-medium">
               {message.profile?.username || "Unknown"}
             </p>
           )}
-          <div className="relative group overflow-visible">
+          <div className="relative group">
             {/* Action buttons */}
             {actionsVisible && !isEditing && (
               <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className={`absolute z-30 flex items-center gap-1 bg-popover/95 backdrop-blur rounded-full border border-border shadow-md px-1 py-0.5 -top-9 sm:top-0 ${
-                  isOwn
-                    ? "right-0 sm:right-auto sm:left-0 sm:-translate-x-[calc(100%+0.5rem)]"
-                    : "left-0 sm:left-auto sm:right-0 sm:translate-x-[calc(100%+0.5rem)]"
+                className={`absolute top-0 flex items-center gap-1 z-20 ${
+                  isOwn ? "-left-28" : "-right-28"
                 }`}
               >
                 {onReact && (
@@ -393,7 +391,7 @@ export function MessageBubble({
                         <Trash2 className="w-3.5 h-3.5" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-52 z-50" sideOffset={8} collisionPadding={8}>
+                    <DropdownMenuContent align="end" className="w-52" sideOffset={5}>
                       {onDeleteForMe && (
                         <DropdownMenuItem 
                           onClick={() => {
