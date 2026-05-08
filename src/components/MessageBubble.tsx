@@ -320,8 +320,7 @@ export function MessageBubble({
     );
   }
 
-  // Only use hover handlers on devices that support hover
-  const supportsHover = typeof window !== "undefined" && window.matchMedia("(hover: hover)").matches;
+
 
   return (
     <>
