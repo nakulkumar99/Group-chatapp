@@ -393,7 +393,7 @@ export function MessageBubble({
                         <Trash2 className="w-3.5 h-3.5" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-52" sideOffset={5}>
+                    <DropdownMenuContent align="end" className="w-52 z-50" sideOffset={8} collisionPadding={8}>
                       {onDeleteForMe && (
                         <DropdownMenuItem 
                           onClick={() => {
