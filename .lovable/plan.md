@@ -1,37 +1,61 @@
-## Explanation
+## What's broken
 
-On mobile (≤390px), the chat header packs too much into one row: back button + avatar + group info on the left, and up to 5 action icons (KeyRound, ShieldCheck, Users, Settings, MoreVertical) on the right. Each icon button is 40×40 with `px-4` outer padding and `gap-3` on the left, so the right-side icons get squeezed, clipped, or pushed off-screen, and the title gets crowded.
+In `src/components/MessageBubble.tsx`, the floating action row (emoji react, edit, pin, delete dropdown) is absolutely positioned at `-left-28` / `-right-28` next to the bubble. On mobile (and for own messages near the right edge on desktop) this row renders **off-screen**, gets clipped by the chat scroll container's `overflow`, and the down-arrow delete dropdown opens against the viewport edge — so reactions, edit, and the menu become invisible or unclickable. The emoji picker `PopoverContent` and the delete `DropdownMenuContent` also use fixed `align`/`side` values that don't flip when there's no room.
 
-The fix is purely CSS/Flexbox — tighten spacing, shrink icon buttons on small screens, allow the title block to flex/shrink, and prevent the right-side group from shrinking so icons stay visible.
+## Plain explanation
 
-## Changes
+The chat scrolls inside a container with `overflow-y: auto`. Anything pushed outside the bubble with a negative offset gets cut off by that container on small screens. We'll move the action row so it sits **inside** the bubble's row (above the bubble, on the bubble-side edge), use a high z-index, and let Radix's Popover/DropdownMenu auto-flip with `collisionPadding` so the picker and menu always stay inside the viewport.
 
-**File: `src/components/layout/ChatArea.tsx`** (header block, lines ~283–392)
+## Plan
 
-1. Header container — reduce horizontal padding on mobile:
-   - `px-4 h-16` → `px-2 sm:px-4 h-14 sm:h-16`
+Edit only `src/components/MessageBubble.tsx` and `src/components/EmojiReactionPicker.tsx`. No logic, props, state, or styling tokens change beyond what's listed.
 
-2. Left group — tighter gap on mobile, allow shrink:
-   - `flex items-center gap-3` → `flex items-center gap-2 sm:gap-3 min-w-0 flex-1`
+### 1. `MessageBubble.tsx` — action toolbar positioning
 
-3. Avatar — slightly smaller on mobile, prevent shrink:
-   - `w-10 h-10 border-2 border-primary/30` → `w-9 h-9 sm:w-10 sm:h-10 border-2 border-primary/30 shrink-0`
+- Replace the absolute toolbar wrapper classes:
+  - From: `absolute top-0 flex items-center gap-1 z-20 ${isOwn ? "-left-28" : "-right-28"}`
+  - To: `absolute -top-8 flex items-center gap-1 z-30 bg-popover/95 backdrop-blur-sm border border-border rounded-full px-1 py-0.5 shadow-md ${isOwn ? "right-0" : "left-0"}`
+- This anchors the toolbar above the bubble on the bubble's own side, so it never extends past the chat column on any width.
+- On the parent message row container (the `flex gap-2 ...` wrapper at line 327-331), add `relative` is not needed (already positioned via inner `relative group`); keep as-is.
+- Increase top padding so the floating toolbar doesn't visually collide with the previous message: add `mt-4` to the inner `relative group` div (line 349) only when `actionsVisible && !isEditing`. Implement via conditional class.
 
-4. Back button — smaller touch target on mobile but still ≥40px:
-   - `min-w-[40px] min-h-[40px]` → `min-w-[40px] min-h-[40px] h-10 w-10 sm:h-10 sm:w-10 shrink-0`
+### 2. `MessageBubble.tsx` — delete dropdown content
 
-5. Right icon group — prevent shrink, tighten gap:
-   - `flex items-center gap-1` → `flex items-center gap-0.5 sm:gap-1 shrink-0`
+- On `<DropdownMenuContent ...>` (line 394) change to:
+  - `align={isOwn ? "end" : "start"}`
+  - add `collisionPadding={8}`
+  - add `className="w-52 z-50"`
+- This makes the menu flip/shift to stay inside the viewport on mobile and never render under the input bar.
 
-6. All right-side icon `<Button size="icon">` elements — make them compact on mobile:
-   - Add `h-9 w-9 sm:h-10 sm:w-10` to each of the 5 buttons (KeyRound, ShieldCheck, Users, Settings, MoreVertical)
-   - Icons stay `w-5 h-5`
+### 3. `EmojiReactionPicker.tsx` — popover content
 
-7. Title `<h1>` — keep `truncate` but ensure parent has `min-w-0` (already added in step 2).
+- On `<PopoverContent ...>`:
+  - change `align="start"` to `align="center"`
+  - add `collisionPadding={8}`
+  - add `z-50` to className
+  - add `sideOffset={6}`
+- Lets Radix auto-flip to `bottom` when there's no room above (top of chat) and keeps it inside the viewport horizontally.
 
-No new dependencies, no new files, no logic changes — pure responsive CSS via Tailwind utilities.
+### 4. Tap-to-toggle on touch devices (already wired)
 
-## Result
+`actionsVisible` already accounts for `dropdownOpen`. To make the toolbar reachable on touch (no hover), add an `onClick` to the inner `relative group` div that toggles `setShowActions((v) => !v)` only when `!supportsHover`. No new state.
 
-- Mobile (≤640px): compact 56px header, 36px icon buttons with 2px gaps — all 5 right-side icons fit on a 360–390px viewport without overflow or clipping.
-- Desktop (≥640px): unchanged appearance (64px header, 40px buttons, original gaps).
+### 5. Overflow safety on the message column
+
+- Change `max-w-[75%]` (line 343) to `max-w-[85%] sm:max-w-[75%]` so bubbles + the in-bounds toolbar have room on small screens.
+
+## Technical details
+
+- z-index: toolbar `z-30`, Radix portals (`PopoverContent`, `DropdownMenuContent`) `z-50`. Both Radix primitives portal to `document.body`, so parent `overflow-hidden`/`transform` no longer clips them.
+- `collisionPadding={8}` prevents the picker/menu from touching the viewport edge on 320–414px screens.
+- No changes to message data flow, hooks, or RLS.
+
+## Files touched
+
+- `src/components/MessageBubble.tsx`
+- `src/components/EmojiReactionPicker.tsx`
+
+## Out of scope
+
+- No backend, hook, or routing changes.
+- No restyling of bubbles, avatars, or read receipts.

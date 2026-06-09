@@ -43,9 +43,11 @@ export function EmojiReactionPicker({ onSelect, className = "" }: EmojiReactionP
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className="w-auto p-2 bg-popover/95 backdrop-blur-sm border border-border shadow-xl"
-        align="start"
+        className="w-auto p-2 bg-popover/95 backdrop-blur-sm border border-border shadow-xl z-50"
+        align="center"
         side="top"
+        sideOffset={6}
+        collisionPadding={8}
       >
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
