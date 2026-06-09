@@ -346,14 +346,17 @@ export function MessageBubble({
               {message.profile?.username || "Unknown"}
             </p>
           )}
-          <div className="relative group">
+          <div
+            className={`relative group ${actionsVisible && !isEditing ? "mt-8" : ""}`}
+            onClick={!supportsHover ? () => setShowActions((v) => !v) : undefined}
+          >
             {/* Action buttons */}
             {actionsVisible && !isEditing && (
               <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className={`absolute top-0 flex items-center gap-1 z-20 ${
-                  isOwn ? "-left-28" : "-right-28"
+                className={`absolute -top-8 flex items-center gap-1 z-30 bg-popover/95 backdrop-blur-sm border border-border rounded-full px-1 py-0.5 shadow-md ${
+                  isOwn ? "right-0" : "left-0"
                 }`}
               >
                 {onReact && (
