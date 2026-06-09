@@ -340,7 +340,7 @@ export function MessageBubble({
           </Avatar>
         )}
         {!isOwn && !showAvatar && <div className="w-8 shrink-0" />}
-        <div className={`max-w-[75%] ${isOwn ? "items-end" : "items-start"}`}>
+        <div className={`max-w-[85%] sm:max-w-[75%] ${isOwn ? "items-end" : "items-start"}`}>
           {showName && (
             <p className="text-xs text-primary mb-1 ml-2 font-medium">
               {message.profile?.username || "Unknown"}
