@@ -144,6 +144,12 @@ export function useMessages(groupId: string | null) {
   ) => {
     if (!groupId || !user) return { error: new Error("Not authenticated") };
 
+    let storagePath: string | null = null;
+    if (fileUrl) {
+      const m = fileUrl.match(/\/chat-attachments\/([^?]+)/);
+      if (m) storagePath = decodeURIComponent(m[1]);
+    }
+
     const { error } = await supabase.from("messages").insert({
       group_id: groupId,
       user_id: user.id,
@@ -151,6 +157,7 @@ export function useMessages(groupId: string | null) {
       file_url: fileUrl || null,
       file_type: fileType || null,
       file_name: fileName || null,
+      storage_path: storagePath,
     });
 
     if (error) {

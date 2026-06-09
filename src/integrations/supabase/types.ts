@@ -291,6 +291,7 @@ export type Database = {
           file_url: string | null
           group_id: string
           id: string
+          storage_path: string | null
           user_id: string
         }
         Insert: {
@@ -304,6 +305,7 @@ export type Database = {
           file_url?: string | null
           group_id: string
           id?: string
+          storage_path?: string | null
           user_id: string
         }
         Update: {
@@ -317,6 +319,7 @@ export type Database = {
           file_url?: string | null
           group_id?: string
           id?: string
+          storage_path?: string | null
           user_id?: string
         }
         Relationships: [
