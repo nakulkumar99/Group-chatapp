@@ -465,13 +465,13 @@ export function MessageBubble({
               ) : (
                 <>
                   {message.content && (
-                    <p className={`text-sm break-words ${message.file_url ? "" : "pr-12"}`}>
+                    <p className="text-sm break-words">
                       {message.content}
                     </p>
                   )}
                 </>
               )}
-              <span className={`absolute bottom-1 right-2 text-[10px] flex items-center gap-1 ${isOwn ? "text-primary-foreground/60" : "text-muted-foreground"}`}>
+              <span className={`mt-1 flex items-center justify-end gap-1 text-[10px] leading-none ${isOwn ? "text-primary-foreground/60" : "text-muted-foreground"}`}>
                 {message.edited_at && <span className="italic">edited</span>}
                 {formattedTime}
                 {isOwn && <CheckCheck className={`w-3.5 h-3.5 ${readReceipts.length > 0 ? "text-sky-400" : "text-primary-foreground/40"}`} />}
