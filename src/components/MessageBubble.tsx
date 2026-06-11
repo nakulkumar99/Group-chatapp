@@ -431,7 +431,7 @@ export function MessageBubble({
             )}
 
             <div
-              className={`px-2.5 py-1.5 relative w-fit max-w-full ${
+              className={`px-2.5 pt-1.5 pb-4 relative w-fit max-w-full ${
                 isOwn ? "message-bubble-own" : "message-bubble-other"
               }`}
             >
