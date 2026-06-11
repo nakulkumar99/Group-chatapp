@@ -347,7 +347,7 @@ export function MessageBubble({
             </p>
           )}
           <div
-            className="relative group mt-8"
+            className="relative group mt-6"
             onClick={!supportsHover ? () => setShowActions((v) => !v) : undefined}
           >
             {/* Action buttons */}
