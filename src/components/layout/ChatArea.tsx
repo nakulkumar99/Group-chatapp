@@ -427,7 +427,7 @@ export function ChatArea({
               </p>
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-0.5">
               {messages.map((message, index) => {
                   const isOwnMessage = message.user_id === user?.id;
                   const showAvatar =
