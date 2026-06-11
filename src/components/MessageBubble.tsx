@@ -431,7 +431,7 @@ export function MessageBubble({
             )}
 
             <div
-              className={`px-2.5 py-1.5 relative w-fit max-w-full ${
+              className={`px-2.5 pt-1.5 pb-4 relative w-fit max-w-full ${
                 isOwn ? "message-bubble-own" : "message-bubble-other"
               }`}
             >
@@ -465,7 +465,7 @@ export function MessageBubble({
               ) : (
                 <>
                   {message.content && (
-                    <p className="text-sm break-words min-w-0 pr-12">
+                    <p className="text-sm break-words min-w-0 pr-1">
                       {message.content}
                     </p>
                   )}
