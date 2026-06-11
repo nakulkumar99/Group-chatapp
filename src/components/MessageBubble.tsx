@@ -465,7 +465,7 @@ export function MessageBubble({
               ) : (
                 <>
                   {message.content && (
-                    <p className="text-sm break-words min-w-0 pr-12">
+                    <p className="text-sm break-words min-w-0 pr-1">
                       {message.content}
                     </p>
                   )}
