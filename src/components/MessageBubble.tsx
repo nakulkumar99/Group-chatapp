@@ -431,7 +431,7 @@ export function MessageBubble({
             )}
 
             <div
-              className={`px-2.5 py-1.5 relative w-fit max-w-full ${
+              className={`px-2.5 pt-1.5 pb-5 relative w-fit max-w-full ${
                 isOwn ? "message-bubble-own" : "message-bubble-other"
               }`}
             >
@@ -465,13 +465,13 @@ export function MessageBubble({
               ) : (
                 <>
                   {message.content && (
-                    <p className="text-sm break-words min-w-0 pr-12">
+                    <p className="text-sm break-words min-w-0 pr-14">
                       {message.content}
                     </p>
                   )}
                 </>
               )}
-              <span className={`absolute bottom-1 right-2 flex items-center gap-1 text-[10px] leading-none ${isOwn ? "text-primary-foreground/60" : "text-muted-foreground"}`}>
+              <span className={`absolute bottom-1 right-2 flex items-center gap-1 text-[10px] leading-none whitespace-nowrap ${isOwn ? "text-primary-foreground/60" : "text-muted-foreground"}`}>
                 {message.edited_at && <span className="italic">edited</span>}
                 {formattedTime}
                 {isOwn && <CheckCheck className={`w-3.5 h-3.5 ${readReceipts.length > 0 ? "text-sky-400" : "text-primary-foreground/40"}`} />}
