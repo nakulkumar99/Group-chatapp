@@ -1,24 +1,28 @@
-## Fix Message Bubble Text/Timestamp Layout
+## Goal
+Match the bubble layout in the screenshot exactly: short messages render as a single compact row — `text` + `time` + `✓✓` all inline on one line, no wrap, no overlap, no extra bottom space.
 
-### Problem
-The selected message bubble div shows text and timestamp colliding visually (e.g., "Hey what's app09:39 PM"). The absolute-positioned timestamp overlaps with short message text on both mobile and desktop.
+## Change (single file: `src/components/MessageBubble.tsx`)
 
-### Solution
-Only modify the inner message bubble div (the `<div>` containing message text + absolute timestamp) to fix spacing and alignment without changing any other component logic, colors, or functionality.
+Replace the current `<p>` + `float-right` timestamp structure with a flex row:
 
-### Changes
-1. **Message text (`<p>`)**: Adjust `padding-right` to ensure sufficient clear space for the timestamp on all screen sizes. Use responsive padding (`pr-16` or equivalent via `min-w`) so short messages don't collapse into the timestamp.
-2. **Timestamp (`<span>`)**: Keep absolute positioning but fine-tune `bottom`/`right` offsets so it sits cleanly in the reserved bottom-right space without clipping or overlap.
-3. **Bubble container**: Ensure `pb-5` bottom padding is enough for the timestamp line, and `w-fit max-w-full` behaves correctly on narrow mobile viewports (prevent overflow/horizontal scroll).
-4. **Responsive safeguard**: Verify `max-w-[78%] sm:max-w-[70%]` on the outer column still contains the bubble properly after padding changes.
+```tsx
+<div className="flex items-end gap-2 min-w-0">
+  <p className="text-sm break-words whitespace-pre-wrap min-w-0 flex-1">
+    {message.content}
+  </p>
+  <span className={`flex items-center gap-1 shrink-0 text-[10px] leading-none whitespace-nowrap pb-0.5 ${isOwn ? "text-primary-foreground/60" : "text-muted-foreground"}`}>
+    {message.edited_at && <span className="italic">edited</span>}
+    {formattedTime}
+    {isOwn && <CheckCheck className={`w-3.5 h-3.5 ${readReceipts.length > 0 ? "text-sky-400" : "text-primary-foreground/40"}`} />}
+  </span>
+</div>
+```
 
-### What stays unchanged
-- All colors, borders, border-radius, hover actions, emoji reactions, edit mode, file rendering
-- Outer flex layout (`justify-end` / `justify-start`) and avatar spacing
-- `mt-6` on the `relative group`, `space-y-0.5` between messages
-- Deleted-message placeholder layout
+Bubble container stays `px-2.5 py-1.5` (compact, matches screenshot).
 
-### Verification
-- Test a very short message (1–2 words) on mobile width
-- Test a medium message that wraps to 2 lines
-- Confirm no horizontal scroll or clipped text on any viewport
+## What stays unchanged
+Colors, bubble classes, edit mode, file rendering, reactions, avatars, deleted placeholder, outer layout, action buttons.
+
+## Result
+- Short message ("Hi"): single row → `Hi  03:31 PM ✓✓`
+- Long message: text wraps naturally; timestamp stays pinned bottom-right of the row via `items-end` + `shrink-0`.
