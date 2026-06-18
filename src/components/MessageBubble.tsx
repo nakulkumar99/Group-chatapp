@@ -431,8 +431,8 @@ export function MessageBubble({
             )}
 
             <div
-              className={`py-1.5 pl-2.5 relative w-fit max-w-full ${
-                isOwn ? "pr-3 message-bubble-own" : "pr-2.5 message-bubble-other"
+              className={`px-2.5 py-1.5 relative w-fit max-w-full ${
+                isOwn ? "message-bubble-own" : "message-bubble-other"
               }`}
             >
               {/* Pinned indicator */}
