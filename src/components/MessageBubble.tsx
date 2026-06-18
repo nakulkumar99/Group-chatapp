@@ -463,14 +463,17 @@ export function MessageBubble({
                   </Button>
                 </div>
               ) : (
-                <p className="text-sm break-words whitespace-pre-wrap min-w-0">
-                  {message.content}
-                  <span className={`inline-flex items-center gap-1 align-bottom ml-2 float-right mt-1 translate-y-1 text-[10px] leading-none whitespace-nowrap ${isOwn ? "text-primary-foreground/60" : "text-muted-foreground"}`}>
+                <div className="flex items-end gap-2 min-w-0">
+                  <p className="text-sm break-words whitespace-pre-wrap min-w-0 flex-1">
+                    {message.content}
+                  </p>
+                  <span className={`flex items-center gap-1 shrink-0 text-[10px] leading-none whitespace-nowrap pb-0.5 ${isOwn ? "text-primary-foreground/60" : "text-muted-foreground"}`}>
                     {message.edited_at && <span className="italic">edited</span>}
                     {formattedTime}
                     {isOwn && <CheckCheck className={`w-3.5 h-3.5 ${readReceipts.length > 0 ? "text-sky-400" : "text-primary-foreground/40"}`} />}
                   </span>
-                </p>
+                </div>
+
               )}
             </div>
 
