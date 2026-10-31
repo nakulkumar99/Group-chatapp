@@ -1,0 +1,248 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* WhatsApp-inspired Design System with Dark/Light Mode */
+
+@layer base {
+  /* Light Mode */
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 10%;
+
+    --card: 0 0% 98%;
+    --card-foreground: 0 0% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 10%;
+
+    --primary: 149 67% 38%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 15% 93%;
+    --secondary-foreground: 0 0% 10%;
+
+    --muted: 210 15% 90%;
+    --muted-foreground: 215 15% 45%;
+
+    --accent: 210 15% 95%;
+    --accent-foreground: 0 0% 10%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 210 15% 88%;
+    --input: 210 15% 90%;
+    --ring: 149 67% 38%;
+
+    --radius: 1rem;
+
+    /* Custom tokens - Light */
+    --chat-bubble-own: 149 67% 88%;
+    --chat-bubble-other: 0 0% 95%;
+    --online-indicator: 142 76% 45%;
+    --hover-overlay: 210 15% 96%;
+    --divider: 210 15% 90%;
+    --whatsapp-green: 149 67% 38%;
+    --whatsapp-dark: 210 15% 95%;
+    --whatsapp-teal: 174 57% 40%;
+    --typing-indicator: 149 67% 35%;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 0 0% 10%;
+    --sidebar-primary: 149 67% 38%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 15% 95%;
+    --sidebar-accent-foreground: 0 0% 10%;
+    --sidebar-border: 210 15% 88%;
+    --sidebar-ring: 149 67% 38%;
+  }
+
+  /* Dark Mode */
+  .dark {
+    --background: 0 0% 5%;
+    --foreground: 0 0% 98%;
+
+    --card: 0 0% 8%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 0 0% 10%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 149 67% 42%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 203 23% 15%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 203 23% 20%;
+    --muted-foreground: 203 15% 60%;
+
+    --accent: 203 23% 18%;
+    --accent-foreground: 0 0% 98%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 203 23% 20%;
+    --input: 203 23% 20%;
+    --ring: 149 67% 42%;
+
+    /* Custom tokens - Dark */
+    --chat-bubble-own: 149 67% 33%;
+    --chat-bubble-other: 203 23% 18%;
+    --online-indicator: 142 76% 45%;
+    --hover-overlay: 203 23% 12%;
+    --divider: 203 23% 16%;
+    --whatsapp-green: 149 67% 38%;
+    --whatsapp-dark: 200 18% 13%;
+    --whatsapp-teal: 174 57% 40%;
+    --typing-indicator: 149 67% 45%;
+
+    --sidebar-background: 0 0% 7%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 149 67% 42%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 203 23% 15%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 203 23% 18%;
+    --sidebar-ring: 149 67% 42%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-muted-foreground/30 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/50;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-card/80 backdrop-blur-xl border border-border/50;
+  }
+
+  .glass-panel {
+    @apply bg-card/95 backdrop-blur-xl;
+  }
+
+  .hover-card {
+    @apply transition-all duration-200 hover:bg-accent/50;
+  }
+
+  .message-bubble-own {
+    @apply bg-chat-own text-foreground rounded-2xl rounded-tr-sm shadow-sm;
+  }
+
+  .dark .message-bubble-own {
+    @apply text-primary-foreground;
+  }
+
+  .message-bubble-other {
+    @apply bg-chat-other text-foreground rounded-2xl rounded-tl-sm shadow-sm;
+  }
+
+  .typing-indicator {
+    @apply text-primary text-sm font-medium animate-pulse;
+  }
+
+  .whatsapp-header {
+    @apply bg-primary text-primary-foreground;
+  }
+
+  .input-themed {
+    @apply bg-accent border-border focus:border-primary focus:ring-primary/20 transition-all duration-200;
+  }
+
+  .btn-primary {
+    @apply bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-full transition-all duration-200;
+  }
+
+  .btn-outline {
+    @apply border border-border hover:bg-accent text-foreground font-semibold rounded-full transition-all duration-200;
+  }
+
+  .sidebar-item {
+    @apply flex items-center gap-3 p-3 rounded-xl transition-all duration-200 hover:bg-accent/50;
+  }
+
+  .sidebar-item-active {
+    @apply bg-primary/20 border border-primary/30;
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    @apply bg-gradient-to-r from-primary to-emerald-400 bg-clip-text text-transparent;
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-out forwards;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.3s ease-out forwards;
+  }
+
+  .animate-scale-in {
+    animation: scaleIn 0.2s ease-out forwards;
+  }
+
+  .theme-transition {
+    @apply transition-colors duration-300 ease-in-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes scaleIn {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+}

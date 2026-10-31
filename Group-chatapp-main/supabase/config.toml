@@ -1,0 +1,22 @@
+project_id = "pfgawailqryusmyjdlqw"
+
+[functions.send-otp]
+verify_jwt = false
+
+[functions.verify-otp]
+verify_jwt = false
+
+[functions.update-member-role]
+verify_jwt = false
+
+[functions.update-group-settings]
+verify_jwt = false
+
+[functions.delete-account]
+verify_jwt = false
+
+[functions.join-group-with-password]
+verify_jwt = false
+
+[functions.set-group-password]
+verify_jwt = false
