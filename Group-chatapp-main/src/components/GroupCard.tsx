@@ -13,6 +13,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { ResetGroupPasswordModal } from "@/components/ResetGroupPasswordModal";
+import { getNetworkErrorMessage } from "@/lib/functionErrors";
 
 interface GroupCardProps {
   id: string;
@@ -67,21 +68,34 @@ export const GroupCard = forwardRef<HTMLDivElement, GroupCardProps>(function Gro
   };
 
   const handlePasswordSubmit = async () => {
+    if (joining) return;
+
     if (!password.trim()) {
       setPasswordError("Password is required");
       return;
     }
+
+    if (password.length > 128) {
+      setPasswordError("Password must be 128 characters or fewer");
+      return;
+    }
+
     setJoining(true);
     setPasswordError("");
-    const result = await onJoin(id, password);
-    setJoining(false);
-    if (result?.error) {
-      setPasswordError(
-        result.error instanceof Error ? result.error.message : "Incorrect password"
-      );
-    } else {
-      setShowPasswordDialog(false);
-      setPassword("");
+
+    try {
+      const result = await onJoin(id, password);
+      if (result?.error) {
+        setPasswordError(getNetworkErrorMessage(result.error));
+      } else {
+        setShowPasswordDialog(false);
+        setPassword("");
+      }
+    } catch (err) {
+      // Keep the dialog usable even if the request layer throws unexpectedly.
+      setPasswordError(getNetworkErrorMessage(err));
+    } finally {
+      setJoining(false);
     }
   };
 
@@ -188,7 +202,12 @@ export const GroupCard = forwardRef<HTMLDivElement, GroupCardProps>(function Gro
               onChange={(e) => { setPassword(e.target.value); setPasswordError(""); }}
               placeholder="Enter password"
               className="h-12"
-              onKeyDown={(e) => e.key === "Enter" && handlePasswordSubmit()}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  void handlePasswordSubmit();
+                }
+              }}
             />
             {passwordError && (
               <p className="text-destructive text-sm">{passwordError}</p>

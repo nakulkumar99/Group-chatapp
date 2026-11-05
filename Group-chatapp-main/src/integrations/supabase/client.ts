@@ -5,13 +5,36 @@ import type { Database } from './types';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-// Import the supabase client like this:
-// import { supabase } from "@/integrations/supabase/client";
+const DIRECT_FUNCTIONS_URL = `${SUPABASE_URL}/functions/v1`;
+const configuredFunctionsUrl = import.meta.env.VITE_SUPABASE_FUNCTIONS_BASE_URL
+  ?.trim()
+  ?.replace(/\/+$/, "");
 
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+// Vercel deployments use a same-origin rewrite (/supabase-functions/* ->
+// Supabase) so edge-function calls are not rejected by browser CORS checks.
+// Local development and Lovable continue to use the direct function URL.
+const isVercelDeployment =
+  typeof window !== "undefined" && window.location.hostname.endsWith(".vercel.app");
+
+export const FUNCTIONS_BASE_URL =
+  configuredFunctionsUrl ||
+  (isVercelDeployment
+    ? `${window.location.origin}/supabase-functions`
+    : DIRECT_FUNCTIONS_URL);
+
+const client = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
     storage: localStorage,
     persistSession: true,
     autoRefreshToken: true,
   }
 });
+
+// supabase.functions.invoke() derives its URL from this property. Point it at
+// the same-origin proxy on Vercel so every edge-function call (join, reset,
+// admin, OTP, etc.) uses the same reliable transport.
+if (FUNCTIONS_BASE_URL !== DIRECT_FUNCTIONS_URL) {
+  (client as unknown as { functionsUrl: URL }).functionsUrl = new URL(FUNCTIONS_BASE_URL);
+}
+
+export const supabase = client;

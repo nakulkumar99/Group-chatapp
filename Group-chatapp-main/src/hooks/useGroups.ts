@@ -1,7 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, FUNCTIONS_BASE_URL } from "@/integrations/supabase/client";
+import { getNetworkErrorMessage, parseFunctionResponse } from "@/lib/functionErrors";
 import { useAuth } from "./useAuth";
 import { toast } from "sonner";
+
+const FUNCTION_TIMEOUT_MS = 20_000;
 
 interface Group {
   id: string;
@@ -105,28 +108,62 @@ export function useGroups() {
       return { error };
     }
 
-    // Store hashed password via edge function
+    // Store hashed password via edge function. If this fails, delete the new
+    // group instead of leaving it locked with no usable password.
     if (password) {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData?.session?.access_token;
-      await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/set-group-password`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          },
-          body: JSON.stringify({ group_id: data.id, password }),
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), FUNCTION_TIMEOUT_MS);
+
+      try {
+        const response = await fetch(
+          `${FUNCTIONS_BASE_URL}/set-group-password`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+              apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            },
+            body: JSON.stringify({ group_id: data.id, password }),
+            signal: controller.signal,
+          }
+        );
+
+        const { error: passwordError } = await parseFunctionResponse(response);
+        if (passwordError) {
+          await supabase
+            .from("groups")
+            .delete()
+            .eq("id", data.id)
+            .eq("created_by", user.id);
+          toast.error(`Failed to set group password: ${passwordError.message}`);
+          return { error: passwordError };
         }
-      );
+      } catch (err) {
+        const message = getNetworkErrorMessage(err);
+        await supabase
+          .from("groups")
+          .delete()
+          .eq("id", data.id)
+          .eq("created_by", user.id);
+        toast.error(`Failed to set group password: ${message}`);
+        return { error: new Error(message) };
+      } finally {
+        clearTimeout(timeout);
+      }
     }
 
     // Auto-join the group
-    await supabase
+    const { error: autoJoinError } = await supabase
       .from("group_members")
       .insert({ group_id: data.id, user_id: user.id });
+
+    if (autoJoinError) {
+      toast.error("Group created, but you could not be added as a member");
+      return { data, error: autoJoinError };
+    }
 
     toast.success("Group created!");
     await fetchGroups();
@@ -134,16 +171,27 @@ export function useGroups() {
   };
 
   const joinGroup = async (groupId: string, password?: string) => {
-    if (!user) return { error: new Error("Not authenticated") };
+    if (!user) {
+      const message = "Your session has expired. Please sign in again.";
+      toast.error(message);
+      return { error: new Error(message) };
+    }
 
-    // Use edge function for password-protected joining
     const { data: sessionData } = await supabase.auth.getSession();
     const token = sessionData?.session?.access_token;
 
-    let response: Response;
+    if (!token) {
+      const message = "Your session has expired. Please sign in again.";
+      toast.error(message);
+      return { error: new Error(message) };
+    }
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), FUNCTION_TIMEOUT_MS);
+
     try {
-      response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/join-group-with-password`,
+      const response = await fetch(
+        `${FUNCTIONS_BASE_URL}/join-group-with-password`,
         {
           method: "POST",
           headers: {
@@ -152,29 +200,29 @@ export function useGroups() {
             apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
           },
           body: JSON.stringify({ group_id: groupId, password }),
+          signal: controller.signal,
         }
       );
-    } catch (err) {
-      toast.error("Network error — please try again");
-      return { error: err instanceof Error ? err : new Error("Network error") };
-    }
 
-    const result = await response.json();
+      // Read the body once and handle non-JSON gateway/proxy responses
+      // without turning them into an unhandled "Network Error".
+      const { error } = await parseFunctionResponse(response);
 
-    if (!response.ok) {
-      if (response.status === 403) {
-        toast.error("Incorrect password");
-      } else if (response.status === 409) {
-        toast.error("You're already a member of this group");
-      } else {
-        toast.error(result.error || "Failed to join group");
+      if (error) {
+        toast.error(error.message);
+        return { error };
       }
-      return { error: new Error(result.error) };
-    }
 
-    toast.success("Joined group!");
-    await fetchGroups();
-    return { error: null };
+      toast.success("Joined group!");
+      await fetchGroups();
+      return { error: null };
+    } catch (err) {
+      const message = getNetworkErrorMessage(err);
+      toast.error(message);
+      return { error: new Error(message) };
+    } finally {
+      clearTimeout(timeout);
+    }
   };
 
   const leaveGroup = async (groupId: string) => {

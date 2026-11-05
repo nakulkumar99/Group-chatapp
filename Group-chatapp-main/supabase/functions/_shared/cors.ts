@@ -20,11 +20,14 @@ function isAllowedOrigin(origin: string) {
 
   try {
     const { protocol, hostname } = new URL(origin);
-    // Allow Vercel production and preview deployments. Edge functions still
-    // require a valid Supabase JWT and enforce their own authorization.
+    // Allow Vercel and Lovable production/preview deployments. Edge functions
+    // still require a valid Supabase JWT and enforce their own authorization.
     return (
       protocol === "https:" &&
-      (hostname === "vercel.app" || hostname.endsWith(".vercel.app"))
+      (hostname === "vercel.app" ||
+        hostname.endsWith(".vercel.app") ||
+        hostname.endsWith(".lovable.app") ||
+        hostname.endsWith(".lovableproject.com"))
     );
   } catch {
     return false;
@@ -40,5 +43,7 @@ export function getCorsHeaders(req: Request) {
     Vary: "Origin",
     "Access-Control-Allow-Headers":
       "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+    "Access-Control-Max-Age": "86400",
   };
 }
