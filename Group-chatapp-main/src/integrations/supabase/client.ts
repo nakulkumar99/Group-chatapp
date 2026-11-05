@@ -22,12 +22,33 @@ export const FUNCTIONS_BASE_URL =
     ? `${window.location.origin}/supabase-functions`
     : DIRECT_FUNCTIONS_URL);
 
+// Vercel consumes the standard Authorization header before the request
+// reaches its Functions. Mirror it into a custom header for our proxy.
+const functionProxyFetch: typeof fetch = (input, init) => {
+  const url =
+    typeof input === "string"
+      ? input
+      : input instanceof URL
+        ? input.href
+        : input.url;
+
+  if (url.includes("/supabase-functions")) {
+    const headers = new Headers(init?.headers);
+    const authorization = headers.get("authorization");
+    if (authorization) headers.set("x-supabase-authorization", authorization);
+    return fetch(input, { ...init, headers });
+  }
+
+  return fetch(input, init);
+};
+
 const client = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
     storage: localStorage,
     persistSession: true,
     autoRefreshToken: true,
-  }
+  },
+  global: { fetch: functionProxyFetch },
 });
 
 // supabase.functions.invoke() derives its URL from this property. Point it at

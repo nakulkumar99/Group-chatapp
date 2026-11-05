@@ -123,7 +123,12 @@ export function useGroups() {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+              ...(token
+                ? {
+                    Authorization: `Bearer ${token}`,
+                    "x-supabase-authorization": `Bearer ${token}`,
+                  }
+                : {}),
               apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
             },
             body: JSON.stringify({ group_id: data.id, password }),
@@ -197,6 +202,7 @@ export function useGroups() {
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
+            "x-supabase-authorization": `Bearer ${token}`,
             apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
           },
           body: JSON.stringify({ group_id: groupId, password }),

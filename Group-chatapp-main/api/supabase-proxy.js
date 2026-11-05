@@ -50,6 +50,15 @@ export default async function handler(req, res) {
     if (value) headers[name] = Array.isArray(value) ? value.join(",") : value;
   }
 
+  if (!headers.authorization) {
+    const customAuthorization = req.headers["x-supabase-authorization"];
+    if (customAuthorization) {
+      headers.authorization = Array.isArray(customAuthorization)
+        ? customAuthorization[0]
+        : customAuthorization;
+    }
+  }
+
   if (!headers.apikey && SUPABASE_PUBLISHABLE_KEY) {
     headers.apikey = SUPABASE_PUBLISHABLE_KEY;
   }
